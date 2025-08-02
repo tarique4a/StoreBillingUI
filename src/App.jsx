@@ -24,6 +24,14 @@ import TransactionForm from './pages/transactions/TransactionForm';
 import TransactionDetail from './pages/transactions/TransactionDetail';
 import PaymentForm from './pages/transactions/PaymentForm';
 
+// Analytics pages
+import Analytics from './pages/Analytics';
+import AdvancedAnalytics from './pages/AdvancedAnalytics';
+
+// Invoice pages
+import Invoices from './pages/Invoices';
+import InvoiceCreate from './pages/InvoiceCreate';
+
 function App() {
   return (
     <ErrorBoundary>
@@ -52,8 +60,15 @@ function App() {
               <Route path="transactions/:id" element={<TransactionDetail />} />
               <Route path="transactions/:id/pay" element={<PaymentForm />} />
 
+              {/* Analytics routes */}
+              <Route path="analytics" element={<AdvancedAnalytics />} />
+              <Route path="reports" element={<Analytics />} />
+
+              {/* Invoice routes */}
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/create" element={<InvoiceCreate />} />
+
               {/* Placeholder routes */}
-              <Route path="reports" element={<div className="p-6"><h1 className="page-title">Reports</h1><p>Reports page coming soon...</p></div>} />
               <Route path="settings" element={<div className="p-6"><h1 className="page-title">Settings</h1><p>Settings page coming soon...</p></div>} />
             </Route>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  PlusIcon, 
+import {
+  PlusIcon,
   EyeIcon,
   CreditCardIcon,
   ArrowUturnLeftIcon,
-  FunnelIcon
+  FunnelIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
@@ -222,6 +223,17 @@ const TransactionList = () => {
                               title="Process Payment"
                             >
                               <CreditCardIcon className="h-5 w-5" />
+                            </Link>
+                          )}
+                          {(transaction.transactionStatus === TRANSACTION_STATUS.CREATED ||
+                            transaction.transactionStatus === TRANSACTION_STATUS.PARTIAL_PAID ||
+                            transaction.transactionStatus === TRANSACTION_STATUS.CLOSED) && (
+                            <Link
+                              to={`/invoices/create?transactionId=${transaction.id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                              title="Create Invoice"
+                            >
+                              <DocumentTextIcon className="h-5 w-5" />
                             </Link>
                           )}
                         </div>

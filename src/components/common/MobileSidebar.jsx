@@ -16,7 +16,7 @@ const navigation = [
   { name: 'Customers', href: '/customers', icon: UsersIcon },
   { name: 'Products', href: '/products', icon: CubeIcon },
   { name: 'Transactions', href: '/transactions', icon: DocumentTextIcon },
-  { name: 'Reports', href: '/reports', icon: ChartBarIcon },
+  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];
 

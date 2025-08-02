@@ -139,4 +139,209 @@ export const formatDate = (timestamp) => {
   });
 };
 
+// New Flexible Analytics API - No Backward Compatibility
+export const analyticsAPI = {
+  // Core unified query endpoint
+  executeQuery: (analyticsRequest) => api.post('/analytics/query', analyticsRequest),
+};
+
+// Invoice API
+export const invoiceAPI = {
+  // CRUD operations
+  create: (invoiceData) => api.post('/invoices', invoiceData),
+  getById: (id) => api.get(`/invoices/${id}`),
+  getByNumber: (invoiceNumber) => api.get(`/invoices/number/${invoiceNumber}`),
+  update: (id, updateData) => api.put(`/invoices/${id}`, updateData),
+  delete: (id) => api.delete(`/invoices/${id}`),
+
+  // PDF operations
+  generatePdf: (id) => api.get(`/invoices/${id}/pdf`, { responseType: 'blob' }),
+
+  // Payment operations
+  addPayment: (id, paymentData) => api.post(`/invoices/${id}/payments`, paymentData),
+
+  // Search and filter operations
+  getByCustomer: (customerId, params = {}) => api.get(`/invoices/customer/${customerId}`, { params }),
+  getByStatus: (status, params = {}) => api.get(`/invoices/status/${status}`, { params }),
+  search: (query, params = {}) => api.get('/invoices/search', { params: { query, ...params } }),
+  getOverdue: () => api.get('/invoices/overdue'),
+
+  // Statistics and configuration
+  getStatistics: () => api.get('/invoices/statistics'),
+  getNumberingConfig: () => api.get('/invoices/numbering/config'),
+};
+
+// Date range helper
+export const createDateRange = (startDate, endDate) => ({
+  startDate: startDate instanceof Date ? startDate.getTime() : startDate,
+  endDate: endDate instanceof Date ? endDate.getTime() : endDate,
+});
+
+// Comprehensive Analytics Request Builder
+export const analyticsRequestBuilder = {
+  // Core request builder
+  createRequest: (collection, aggregations, filters = [], options = {}) => ({
+    collection,
+    filters,
+    aggregations,
+    includeRawData: options.includeRawData || false,
+    includeFields: options.includeFields,
+    excludeFields: options.excludeFields,
+    globalLimit: options.globalLimit,
+    globalSkip: options.globalSkip,
+  }),
+
+  // Filter builders
+  filters: {
+    equals: (field, value) => ({ field, operation: 'EQUALS', value }),
+    notEquals: (field, value) => ({ field, operation: 'NOT_EQUALS', value }),
+    greaterThan: (field, value) => ({ field, operation: 'GREATER_THAN', value }),
+    lessThan: (field, value) => ({ field, operation: 'LESS_THAN', value }),
+    between: (field, minValue, maxValue) => ({ field, operation: 'BETWEEN', minValue, maxValue }),
+    in: (field, values) => ({ field, operation: 'IN', values }),
+    notIn: (field, values) => ({ field, operation: 'NOT_IN', values }),
+    contains: (field, value) => ({ field, operation: 'CONTAINS', value }),
+    dateRange: (field, startDate, endDate) => ({
+      field,
+      operation: 'BETWEEN',
+      minValue: startDate instanceof Date ? startDate.getTime() : startDate,
+      maxValue: endDate instanceof Date ? endDate.getTime() : endDate
+    }),
+    excludeDrafted: () => ({ field: 'transactionStatus', operation: 'NOT_EQUALS', value: 'DRAFTED' }),
+    onlyCompleted: () => ({ field: 'transactionStatus', operation: 'EQUALS', value: 'CLOSED' }),
+    lowStock: (threshold) => ({ field: 'quantity', operation: 'LESS_THAN_OR_EQUAL', value: threshold }),
+  },
+
+  // Aggregation builders
+  aggregations: {
+    count: (name) => ({ name, type: 'COUNT' }),
+    sum: (name, field) => ({ name, type: 'SUM', field }),
+    average: (name, field) => ({ name, type: 'AVERAGE', field }),
+    min: (name, field) => ({ name, type: 'MIN', field }),
+    max: (name, field) => ({ name, type: 'MAX', field }),
+
+    // Time-based aggregations
+    dailySum: (name, field) => ({
+      name, type: 'SUM', field, timeGrouping: 'DAY', sortBy: 'timeGroup', sortDirection: 'ASC'
+    }),
+    monthlySum: (name, field) => ({
+      name, type: 'SUM', field, timeGrouping: 'MONTH', sortBy: 'timeGroup', sortDirection: 'ASC'
+    }),
+    dailyCount: (name) => ({
+      name, type: 'COUNT', timeGrouping: 'DAY', sortBy: 'timeGroup', sortDirection: 'ASC'
+    }),
+
+    // Grouped aggregations
+    groupedSum: (name, field, groupByFields, limit = null) => ({
+      name, type: 'SUM', field, groupByFields, sortBy: name, sortDirection: 'DESC', limit
+    }),
+    groupedCount: (name, groupByFields, limit = null) => ({
+      name, type: 'COUNT', groupByFields, sortBy: name, sortDirection: 'DESC', limit
+    }),
+  },
+
+  // Preset request builders
+  presets: {
+    dashboard: (dateRange = null) => {
+      const filters = [analyticsRequestBuilder.filters.excludeDrafted()];
+      if (dateRange) {
+        filters.push(analyticsRequestBuilder.filters.dateRange('createdTime', dateRange.startDate, dateRange.endDate));
+      }
+
+      return analyticsRequestBuilder.createRequest('transaction', [
+        analyticsRequestBuilder.aggregations.count('totalTransactions'),
+        analyticsRequestBuilder.aggregations.sum('totalRevenue', 'totalAmount'),
+        analyticsRequestBuilder.aggregations.sum('totalPaidAmount', 'totalPaidAmount'),
+      ], filters);
+    },
+
+    salesTrends: (dateRange = null, grouping = 'DAY') => {
+      const filters = [analyticsRequestBuilder.filters.excludeDrafted()];
+      if (dateRange) {
+        filters.push(analyticsRequestBuilder.filters.dateRange('createdTime', dateRange.startDate, dateRange.endDate));
+      }
+
+      const aggregations = grouping === 'DAY'
+        ? [analyticsRequestBuilder.aggregations.dailySum('salesTrend', 'totalAmount')]
+        : [analyticsRequestBuilder.aggregations.monthlySum('salesTrend', 'totalAmount')];
+
+      return analyticsRequestBuilder.createRequest('transaction', aggregations, filters);
+    },
+
+    topProducts: (limit = 10, dateRange = null) => {
+      const filters = [analyticsRequestBuilder.filters.excludeDrafted()];
+      if (dateRange) {
+        filters.push(analyticsRequestBuilder.filters.dateRange('createdTime', dateRange.startDate, dateRange.endDate));
+      }
+
+      return analyticsRequestBuilder.createRequest('transaction', [
+        analyticsRequestBuilder.aggregations.groupedSum('topProducts', 'productTransactionDetails.quantity', ['productTransactionDetails.productId'], limit)
+      ], filters);
+    },
+
+    topCustomers: (limit = 10, dateRange = null) => {
+      const filters = [analyticsRequestBuilder.filters.excludeDrafted()];
+      if (dateRange) {
+        filters.push(analyticsRequestBuilder.filters.dateRange('createdTime', dateRange.startDate, dateRange.endDate));
+      }
+
+      return analyticsRequestBuilder.createRequest('transaction', [
+        analyticsRequestBuilder.aggregations.groupedSum('topCustomers', 'totalAmount', ['customerId'], limit),
+        analyticsRequestBuilder.aggregations.groupedCount('customerTransactionCount', ['customerId'], limit)
+      ], filters);
+    },
+
+    lowStockProducts: (threshold = 10, limit = 20) => {
+      return analyticsRequestBuilder.createRequest('product', [
+        analyticsRequestBuilder.aggregations.count('lowStockCount')
+      ], [
+        analyticsRequestBuilder.filters.lowStock(threshold)
+      ], {
+        includeRawData: true,
+        includeFields: ['name', 'brand', 'category', 'quantity', 'unitSalePrice'],
+        globalLimit: limit
+      });
+    },
+
+    recentTransactions: (limit = 10) => {
+      return analyticsRequestBuilder.createRequest('transaction', [
+        analyticsRequestBuilder.aggregations.count('totalCount')
+      ], [], {
+        includeRawData: true,
+        includeFields: ['customerId', 'totalAmount', 'totalPaidAmount', 'transactionStatus', 'createdTime'],
+        globalLimit: limit
+      });
+    },
+
+    transactionsByStatus: (dateRange = null) => {
+      const filters = [analyticsRequestBuilder.filters.excludeDrafted()];
+      if (dateRange) {
+        filters.push(analyticsRequestBuilder.filters.dateRange('createdTime', dateRange.startDate, dateRange.endDate));
+      }
+
+      return analyticsRequestBuilder.createRequest('transaction', [
+        analyticsRequestBuilder.aggregations.groupedCount('transactionsByStatus', ['transactionStatus'])
+      ], filters);
+    },
+
+    customerAnalytics: (limit = 10) => {
+      return analyticsRequestBuilder.createRequest('customer', [
+        analyticsRequestBuilder.aggregations.count('totalCustomers')
+      ], [], {
+        includeRawData: true,
+        globalLimit: limit
+      });
+    },
+
+    productAnalytics: (limit = 10) => {
+      return analyticsRequestBuilder.createRequest('product', [
+        analyticsRequestBuilder.aggregations.count('totalProducts')
+      ], [], {
+        includeRawData: true,
+        globalLimit: limit
+      });
+    },
+  },
+};
+
 export default api;

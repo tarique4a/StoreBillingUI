@@ -8,7 +8,7 @@ import {
   ArrowTrendingUpIcon,
 } from '@heroicons/react/24/outline';
 
-import { formatCurrency } from '../services/api';
+import { analyticsAPI, analyticsRequestBuilder, formatCurrency, formatDate } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Dashboard = () => {
@@ -17,8 +17,11 @@ const Dashboard = () => {
     totalProducts: 0,
     totalTransactions: 0,
     totalRevenue: 0,
+    totalPaidAmount: 0,
+    totalDueAmount: 0,
     recentTransactions: [],
     lowStockProducts: [],
+    topSellingProducts: [],
   });
   const [loading, setLoading] = useState(true);
 
@@ -29,18 +32,60 @@ const Dashboard = () => {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-      // In a real app, you would fetch this data from your APIs
-      // For now, we'll use placeholder data
+
+      // Execute all analytics queries in parallel using the new flexible API
+      const [
+        dashboardResponse,
+        customerResponse,
+        productResponse,
+        recentTransactionsResponse,
+        lowStockResponse,
+        topProductsResponse
+      ] = await Promise.all([
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.dashboard()),
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.customerAnalytics()),
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.productAnalytics()),
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.recentTransactions(10)),
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.lowStockProducts(10, 5)),
+        analyticsAPI.executeQuery(analyticsRequestBuilder.presets.topProducts(5))
+      ]);
+
+      // Extract data from responses
+      const dashboardData = dashboardResponse.data;
+      const customerData = customerResponse.data;
+      const productData = productResponse.data;
+      const recentData = recentTransactionsResponse.data;
+      const lowStockData = lowStockResponse.data;
+      const topProductsData = topProductsResponse.data;
+
+      // Combine all data into dashboard stats
+      const combinedStats = {
+        totalCustomers: customerData.aggregations?.totalCustomers || 0,
+        totalProducts: productData.aggregations?.totalProducts || 0,
+        totalTransactions: dashboardData.aggregations?.totalTransactions || 0,
+        totalRevenue: dashboardData.aggregations?.totalRevenue || 0,
+        totalPaidAmount: dashboardData.aggregations?.totalPaidAmount || 0,
+        totalDueAmount: (dashboardData.aggregations?.totalRevenue || 0) - (dashboardData.aggregations?.totalPaidAmount || 0),
+        recentTransactions: recentData.rawData || [],
+        lowStockProducts: lowStockData.rawData || [],
+        topSellingProducts: topProductsData.aggregations?.topProducts || [],
+      };
+
+      setStats(combinedStats);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+      // Keep default values on error
       setStats({
         totalCustomers: 0,
         totalProducts: 0,
         totalTransactions: 0,
         totalRevenue: 0,
+        totalPaidAmount: 0,
+        totalDueAmount: 0,
         recentTransactions: [],
         lowStockProducts: [],
+        topSellingProducts: [],
       });
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }
@@ -65,7 +110,7 @@ const Dashboard = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="card">
           <div className="card-body">
             <div className="flex items-center">
@@ -146,7 +191,28 @@ const Dashboard = () => {
             </div>
             <div className="mt-4 flex items-center">
               <ArrowTrendingUpIcon className="h-4 w-4 text-green-500 mr-1" />
-              <span className="text-sm text-green-600">+12% from last month</span>
+              <span className="text-sm text-green-600">Total Revenue</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <div className="h-8 w-8 bg-red-100 rounded-lg flex items-center justify-center">
+                  <CurrencyDollarIcon className="h-5 w-5 text-red-600" />
+                </div>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium text-gray-500">Due Amount</p>
+                <p className="text-2xl font-semibold text-gray-900">
+                  {formatCurrency(stats.totalDueAmount)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex items-center">
+              <span className="text-sm text-red-600">Pending Payments</span>
             </div>
           </div>
         </div>
@@ -235,13 +301,27 @@ const Dashboard = () => {
                       <p className="text-sm font-medium text-gray-900">
                         #{transaction.id.slice(-8)}
                       </p>
-                      <p className="text-sm text-gray-500">{transaction.customerName}</p>
+                      <p className="text-sm text-gray-500">{transaction.customerName || 'Unknown Customer'}</p>
+                      <p className="text-xs text-gray-400">{formatDate(transaction.createdTime)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-900">
                         {formatCurrency(transaction.totalAmount)}
                       </p>
-                      <p className="text-sm text-gray-500">{transaction.status}</p>
+                      <p className="text-xs text-gray-500">
+                        Paid: {formatCurrency(transaction.totalPaidAmount)}
+                      </p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        transaction.transactionStatus === 'CLOSED'
+                          ? 'bg-green-100 text-green-800'
+                          : transaction.transactionStatus === 'PARTIAL_PAID'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : transaction.transactionStatus === 'CREATED'
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {transaction.transactionStatus}
+                      </span>
                     </div>
                   </div>
                 ))}
