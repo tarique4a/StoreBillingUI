@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   PencilIcon,
-  TrashIcon,
   EyeIcon,
   FunnelIcon
 } from '@heroicons/react/24/outline';
@@ -14,13 +13,10 @@ import { LoadingOverlay } from '../../components/common/LoadingSpinner';
 import SearchInput from '../../components/common/SearchInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-
 const CustomerList = () => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, customer: null });
 
   useEffect(() => {
     loadCustomers();
@@ -64,24 +60,7 @@ const CustomerList = () => {
     }
   };
 
-  const handleDelete = async (customer) => {
-    try {
-      await customerAPI.delete(customer.id);
-      toast.success('Customer deleted successfully');
-      loadCustomers();
-    } catch (error) {
-      toast.error('Failed to delete customer');
-      console.error('Delete error:', error);
-    }
-  };
 
-  const openDeleteDialog = (customer) => {
-    setDeleteDialog({ isOpen: true, customer });
-  };
-
-  const closeDeleteDialog = () => {
-    setDeleteDialog({ isOpen: false, customer: null });
-  };
 
   return (
     <div className="space-y-6">
@@ -189,13 +168,6 @@ const CustomerList = () => {
                           >
                             <PencilIcon className="h-5 w-5" />
                           </Link>
-                          <button
-                            onClick={() => openDeleteDialog(customer)}
-                            className="text-danger-600 hover:text-danger-900"
-                            title="Delete"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -206,17 +178,6 @@ const CustomerList = () => {
           )}
         </LoadingOverlay>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
-        onClose={closeDeleteDialog}
-        onConfirm={() => handleDelete(deleteDialog.customer)}
-        title="Delete Customer"
-        message={`Are you sure you want to delete "${deleteDialog.customer?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        type="danger"
-      />
     </div>
   );
 };

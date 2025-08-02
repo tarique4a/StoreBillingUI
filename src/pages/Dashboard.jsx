@@ -6,12 +6,18 @@ import {
   DocumentTextIcon,
   CurrencyDollarIcon,
   ArrowTrendingUpIcon,
+  BuildingStorefrontIcon,
 } from '@heroicons/react/24/outline';
 
+import { useAuth } from '../contexts/AuthContext';
+import { useShop } from '../contexts/ShopContext';
 import { analyticsAPI, analyticsRequestBuilder, formatCurrency, formatDate } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
 const Dashboard = () => {
+  const { user, isAuthenticated } = useAuth();
+  const { currentShop, loading: shopLoading } = useShop();
+
   const [stats, setStats] = useState({
     totalCustomers: 0,
     totalProducts: 0,
@@ -24,14 +30,22 @@ const Dashboard = () => {
     topSellingProducts: [],
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    // Only load data when user is authenticated and shop is selected
+    if (isAuthenticated && currentShop && !shopLoading) {
+      loadDashboardData();
+    } else if (isAuthenticated && !shopLoading && !currentShop) {
+      // User is authenticated but no shop selected
+      setLoading(false);
+    }
+  }, [isAuthenticated, currentShop, shopLoading]);
 
   const loadDashboardData = async () => {
     try {
       setLoading(true);
+      setError(null);
 
       // Execute all analytics queries in parallel using the new flexible API
       const [
@@ -74,6 +88,7 @@ const Dashboard = () => {
       setStats(combinedStats);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      setError(error.message || 'Failed to load dashboard data');
       // Keep default values on error
       setStats({
         totalCustomers: 0,
@@ -91,10 +106,29 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
+  // Show loading state
+  if (loading || shopLoading) {
     return (
       <div className="flex justify-center items-center h-64">
         <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // Show no shop selected state
+  if (!currentShop) {
+    return (
+      <div className="text-center py-12">
+        <BuildingStorefrontIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No shop selected</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Create or select a shop to view your dashboard
+        </p>
+        <div className="mt-6">
+          <Link to="/shops/create" className="btn-primary">
+            Create Shop
+          </Link>
+        </div>
       </div>
     );
   }
@@ -295,15 +329,16 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {stats.recentTransactions.map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">
-                        #{transaction.id.slice(-8)}
-                      </p>
-                      <p className="text-sm text-gray-500">{transaction.customerName || 'Unknown Customer'}</p>
-                      <p className="text-xs text-gray-400">{formatDate(transaction.createdTime)}</p>
-                    </div>
+                {stats.recentTransactions && stats.recentTransactions.length > 0 ? (
+                  stats.recentTransactions.map((transaction) => (
+                    <div key={transaction.id || Math.random()} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          #{transaction.id ? transaction.id.slice(-8) : 'N/A'}
+                        </p>
+                        <p className="text-sm text-gray-500">{transaction.customerName || 'Unknown Customer'}</p>
+                        <p className="text-xs text-gray-400">{transaction.createdTime ? formatDate(transaction.createdTime) : 'N/A'}</p>
+                      </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-gray-900">
                         {formatCurrency(transaction.totalAmount)}
@@ -324,7 +359,21 @@ const Dashboard = () => {
                       </span>
                     </div>
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="text-center py-6">
+                    <DocumentTextIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No recent transactions</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Start by creating your first transaction
+                    </p>
+                    <div className="mt-6">
+                      <Link to="/transactions/new" className="btn-primary">
+                        Create Transaction
+                      </Link>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -351,19 +400,29 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="space-y-3">
-                {stats.lowStockProducts.map((product) => (
-                  <div key={product.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{product.name}</p>
-                      <p className="text-sm text-gray-500">{product.brand}</p>
-                    </div>
+                {stats.lowStockProducts && stats.lowStockProducts.length > 0 ? (
+                  stats.lowStockProducts.map((product) => (
+                    <div key={product.id || Math.random()} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{product.name || 'Unknown Product'}</p>
+                        <p className="text-sm text-gray-500">{product.brand || 'No Brand'}</p>
+                      </div>
                     <div className="text-right">
                       <p className="text-sm font-medium text-danger-600">
-                        {product.quantity} left
+                        {product.quantity || 0} left
                       </p>
                     </div>
                   </div>
-                ))}
+                ))
+                ) : (
+                  <div className="text-center py-6">
+                    <CubeIcon className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">No low stock products</h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      All products are well stocked
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>

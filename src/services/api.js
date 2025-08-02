@@ -59,12 +59,30 @@ api.interceptors.response.use(
   }
 );
 
+// Authentication API
+export const authAPI = {
+  login: (credentials) => api.post('/auth/login', credentials),
+  register: (userData) => api.post('/auth/register', userData),
+  logout: () => api.post('/auth/logout'),
+  getCurrentUser: () => api.get('/auth/me'),
+};
+
+// Shop API
+export const shopAPI = {
+  getAll: () => api.get('/shops'),
+  getById: (id) => api.get(`/shops/${id}`),
+  create: (data) => api.post('/shops', data),
+  update: (id, data) => api.put(`/shops/${id}`, data),
+  delete: (id) => api.delete(`/shops/${id}`),
+  getDefault: () => api.get('/shops/default'),
+  setDefault: (id) => api.post(`/shops/${id}/set-default`),
+};
+
 // Customer API
 export const customerAPI = {
   getById: (id) => api.get(`/customer/${id}`),
   create: (data) => api.post('/customer/create', data),
   update: (id, data) => api.put(`/customer/update/${id}`, data),
-  delete: (id) => api.put(`/customer/delete/${id}`),
   search: (criteria) => api.get('/customer/search', { data: criteria }),
 };
 

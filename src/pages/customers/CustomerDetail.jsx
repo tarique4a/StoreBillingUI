@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 import {
   ArrowLeftIcon,
   PencilIcon,
-  TrashIcon,
   EnvelopeIcon,
   PhoneIcon,
   MapPinIcon,
@@ -14,14 +13,11 @@ import {
 import { customerAPI, formatDate } from '../../services/api';
 import { PageLoader } from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
-
 const CustomerDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [customer, setCustomer] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [deleteDialog, setDeleteDialog] = useState(false);
 
   useEffect(() => {
     loadCustomer();
@@ -40,15 +36,7 @@ const CustomerDetail = () => {
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await customerAPI.delete(id);
-      toast.success('Customer deleted successfully');
-      navigate('/customers');
-    } catch (error) {
-      toast.error('Failed to delete customer');
-    }
-  };
+
 
   if (loading) {
     return <PageLoader />;
@@ -95,13 +83,6 @@ const CustomerDetail = () => {
             <PencilIcon className="h-5 w-5 mr-2" />
             Edit
           </Link>
-          <button
-            onClick={() => setDeleteDialog(true)}
-            className="btn-danger"
-          >
-            <TrashIcon className="h-5 w-5 mr-2" />
-            Delete
-          </button>
         </div>
       </div>
 
@@ -225,17 +206,6 @@ const CustomerDetail = () => {
           </div>
         </div>
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={deleteDialog}
-        onClose={() => setDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title="Delete Customer"
-        message={`Are you sure you want to delete "${customer.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        type="danger"
-      />
     </div>
   );
 };

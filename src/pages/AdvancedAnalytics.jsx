@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   ChartBarIcon,
   CurrencyDollarIcon,
@@ -6,22 +7,30 @@ import {
   UsersIcon,
   CubeIcon,
   ClockIcon,
+  BuildingStorefrontIcon,
 } from '@heroicons/react/24/outline';
 
+import { useAuth } from '../contexts/AuthContext';
+import { useShop } from '../contexts/ShopContext';
 import { analyticsAPI, analyticsRequestBuilder, formatCurrency } from '../services/api';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import DateRangePicker from '../components/common/DateRangePicker';
 import FlexibleAnalyticsDemo from '../components/analytics/FlexibleAnalyticsDemo';
 
 const AdvancedAnalytics = () => {
+  const { isAuthenticated } = useAuth();
+  const { currentShop, loading: shopLoading } = useShop();
+
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
 
   const loadAnalytics = useCallback(async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Execute multiple analytics queries in parallel
       const queries = await Promise.allSettled([
@@ -78,14 +87,36 @@ const AdvancedAnalytics = () => {
       setAnalytics(combinedAnalytics);
     } catch (error) {
       console.error('Error loading analytics:', error);
+      setError(error.message || 'Failed to load analytics data');
+      // Set default empty analytics
+      setAnalytics({
+        totalRevenue: 0,
+        totalPaidAmount: 0,
+        totalDueAmount: 0,
+        totalTransactions: 0,
+        transactionsByStatus: [],
+        topSellingProducts: [],
+        topCustomers: [],
+        dailySales: [],
+        monthlySales: [],
+        lowStockProducts: [],
+        lowStockCount: 0,
+        executionTimes: [],
+      });
     } finally {
       setLoading(false);
     }
   }, [dateRange]);
 
   useEffect(() => {
-    loadAnalytics();
-  }, [loadAnalytics]);
+    // Only load data when user is authenticated and shop is selected
+    if (isAuthenticated && currentShop && !shopLoading) {
+      loadAnalytics();
+    } else if (isAuthenticated && !shopLoading && !currentShop) {
+      // User is authenticated but no shop selected
+      setLoading(false);
+    }
+  }, [loadAnalytics, isAuthenticated, currentShop, shopLoading]);
 
   const handleDateRangeChange = (newDateRange) => {
     setDateRange(newDateRange);
@@ -99,8 +130,31 @@ const AdvancedAnalytics = () => {
     { id: 'demo', name: 'API Demo', icon: ClockIcon },
   ];
 
-  if (loading) {
-    return <LoadingSpinner />;
+  // Show loading state
+  if (loading || shopLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
+
+  // Show no shop selected state
+  if (!currentShop) {
+    return (
+      <div className="text-center py-12">
+        <BuildingStorefrontIcon className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">No shop selected</h3>
+        <p className="mt-1 text-sm text-gray-500">
+          Create or select a shop to view analytics
+        </p>
+        <div className="mt-6">
+          <Link to="/shops/create" className="btn-primary">
+            Create Shop
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -230,16 +284,26 @@ const AdvancedAnalytics = () => {
                 </div>
                 <div className="card-body">
                   <div className="space-y-4">
-                    {analytics.transactionsByStatus.map((status) => (
-                      <div key={status.transactionStatus} className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600 capitalize">
-                          {status.transactionStatus.toLowerCase().replace('_', ' ')}
-                        </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {status.transactionsByStatus}
-                        </span>
+                    {analytics.transactionsByStatus && analytics.transactionsByStatus.length > 0 ? (
+                      analytics.transactionsByStatus.map((status) => (
+                        <div key={status.transactionStatus || Math.random()} className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600 capitalize">
+                            {status.transactionStatus ? status.transactionStatus.toLowerCase().replace('_', ' ') : 'Unknown Status'}
+                          </span>
+                          <span className="text-sm font-medium text-gray-900">
+                            {status.transactionsByStatus || 0}
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-6">
+                        <ChartBarIcon className="mx-auto h-12 w-12 text-gray-400" />
+                        <h3 className="mt-2 text-sm font-medium text-gray-900">No transaction data</h3>
+                        <p className="mt-1 text-sm text-gray-500">
+                          Transaction status breakdown will appear here
+                        </p>
                       </div>
-                    ))}
+                    )}
                   </div>
                 </div>
               </div>
@@ -269,14 +333,24 @@ const AdvancedAnalytics = () => {
           </div>
           <div className="card-body">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {analytics.executionTimes.map((metric) => (
-                <div key={metric.query} className="text-center">
-                  <p className="text-sm text-gray-600 capitalize">{metric.query}</p>
-                  <p className="text-lg font-semibold text-gray-900">
-                    {metric.time ? `${metric.time}ms` : 'Failed'}
+              {analytics.executionTimes && analytics.executionTimes.length > 0 ? (
+                analytics.executionTimes.map((metric) => (
+                  <div key={metric.query || Math.random()} className="text-center">
+                    <p className="text-sm text-gray-600 capitalize">{metric.query || 'Unknown'}</p>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {metric.time ? `${metric.time}ms` : 'Failed'}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-full text-center py-6">
+                  <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">No performance data</h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Query execution times will appear here
                   </p>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         </div>
