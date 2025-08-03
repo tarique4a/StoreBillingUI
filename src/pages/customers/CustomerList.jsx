@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PlusIcon,
@@ -14,27 +14,54 @@ import SearchInput from '../../components/common/SearchInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
 const CustomerList = () => {
+  console.log('CustomerList component rendered');
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadCustomers();
-  }, []);
+  const loadCustomers = useCallback(async () => {
+    console.log('loadCustomers called, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
 
-  const loadCustomers = async () => {
+    // Prevent multiple simultaneous calls
+    if (hasLoaded || isLoading) {
+      console.log('Skipping loadCustomers - already loaded or loading');
+      return;
+    }
+
     try {
+      setIsLoading(true);
       setLoading(true);
       // Since there's no getAll endpoint, we'll search with empty criteria
+      console.log('Making API call to customerAPI.search([])');
       const response = await customerAPI.search([]);
+      console.log('API call successful, response:', response.data);
       setCustomers(response.data);
+      setHasLoaded(true);
     } catch (error) {
-      toast.error('Failed to load customers');
+      console.error('loadCustomers error:', error);
+      // Only show error toast if it's not a network error (backend not running)
+      if (error.code !== 'ERR_NETWORK') {
+        toast.error('Failed to load customers');
+      } else {
+        console.warn('Backend server not running. Please start the backend server.');
+      }
       console.error('Error loading customers:', error);
+      setHasLoaded(true); // Prevent infinite retries
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, [hasLoaded, isLoading]);
+
+  useEffect(() => {
+    console.log('CustomerList useEffect triggered, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
+    if (!hasLoaded && !isLoading) {
+      loadCustomers();
+    }
+  }, [hasLoaded, isLoading, loadCustomers]);
 
   const handleSearch = async (term) => {
     setSearchTerm(term);

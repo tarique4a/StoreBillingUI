@@ -56,20 +56,26 @@ const CustomerForm = () => {
   };
 
   const onSubmit = async (data) => {
+    console.log('CustomerForm onSubmit called with data:', data);
     try {
       setLoading(true);
-      
+
       if (isEdit) {
+        console.log('Updating customer with ID:', id);
         await customerAPI.update(id, data);
         toast.success('Customer updated successfully');
       } else {
-        await customerAPI.create(data);
+        console.log('Creating new customer');
+        const response = await customerAPI.create(data);
+        console.log('Customer created successfully:', response.data);
         toast.success('Customer created successfully');
       }
-      
+
       navigate('/customers');
     } catch (error) {
-      const message = error.response?.data?.message || 'Operation failed';
+      console.error('Customer form submission error:', error);
+      console.error('Error response:', error.response?.data);
+      const message = error.response?.data?.message || error.message || 'Operation failed';
       toast.error(message);
     } finally {
       setLoading(false);
@@ -127,6 +133,14 @@ const CustomerForm = () => {
                       value: 2,
                       message: 'Name must be at least 2 characters',
                     },
+                    maxLength: {
+                      value: 100,
+                      message: 'Name must not exceed 100 characters',
+                    },
+                    pattern: {
+                      value: /^[a-zA-Z\s.'-]+$/,
+                      message: 'Name can only contain letters, spaces, dots, apostrophes, and hyphens',
+                    },
                   })}
                 />
                 {errors.name && (
@@ -180,6 +194,10 @@ const CustomerForm = () => {
                   className={`form-input ${errors.email ? 'border-danger-300' : ''}`}
                   {...register('email', {
                     required: 'Email is required',
+                    maxLength: {
+                      value: 100,
+                      message: 'Email must not exceed 100 characters',
+                    },
                     pattern: {
                       value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                       message: 'Invalid email address',
@@ -197,7 +215,16 @@ const CustomerForm = () => {
                 <input
                   type="text"
                   className={`form-input ${errors.city ? 'border-danger-300' : ''}`}
-                  {...register('city')}
+                  {...register('city', {
+                    maxLength: {
+                      value: 50,
+                      message: 'City name must not exceed 50 characters',
+                    },
+                    pattern: {
+                      value: /^[a-zA-Z\s.'-]*$/,
+                      message: 'City name can only contain letters, spaces, dots, apostrophes, and hyphens',
+                    },
+                  })}
                 />
                 {errors.city && (
                   <p className="form-error">{errors.city.message}</p>

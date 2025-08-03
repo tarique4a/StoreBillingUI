@@ -17,6 +17,9 @@ api.interceptors.request.use(
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('API Request:', config.method?.toUpperCase(), config.url, 'with token');
+    } else {
+      console.log('API Request:', config.method?.toUpperCase(), config.url, 'without token');
     }
     return config;
   },
@@ -28,16 +31,21 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
+    console.log('API Response:', response.status, response.config.method?.toUpperCase(), response.config.url);
     return response;
   },
   (error) => {
+    console.error('API Error:', error.response?.status, error.config?.method?.toUpperCase(), error.config?.url, error.response?.data || error.message);
+
     const message = error.response?.data?.message || error.message || 'An error occurred';
-    
+
     // Handle different error status codes
     switch (error.response?.status) {
       case 401:
-        toast.error('Unauthorized access');
-        // Redirect to login if needed
+        console.log('401 Unauthorized - redirecting to login');
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
         break;
       case 403:
         toast.error('Access forbidden');
@@ -52,9 +60,12 @@ api.interceptors.response.use(
         toast.error('Server error occurred');
         break;
       default:
-        toast.error(message);
+        // Only show toast for non-network errors
+        if (error.response) {
+          toast.error(message);
+        }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -86,7 +97,7 @@ export const customerAPI = {
   getById: (id) => api.get(`/customer/${id}`),
   create: (data) => api.post('/customer/create', data),
   update: (id, data) => api.put(`/customer/update/${id}`, data),
-  search: (criteria) => api.get('/customer/search', { data: criteria }),
+  search: (criteria) => api.post('/customer/search', criteria),
 };
 
 // Product API

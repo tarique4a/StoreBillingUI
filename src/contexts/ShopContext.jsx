@@ -35,7 +35,7 @@ export const ShopProvider = ({ children }) => {
       setLoading(true);
       const response = await shopAPI.getAll();
       setShops(response.data);
-      
+
       // Set current shop to default shop if available
       if (response.data.length > 0) {
         try {
@@ -48,7 +48,12 @@ export const ShopProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Failed to load shops:', error);
-      toast.error('Failed to load shops');
+      // Only show error toast if it's not a network error (backend not running)
+      if (error.code !== 'ERR_NETWORK') {
+        toast.error('Failed to load shops');
+      } else {
+        console.warn('Backend server not running. Shops will be unavailable.');
+      }
     } finally {
       setLoading(false);
     }

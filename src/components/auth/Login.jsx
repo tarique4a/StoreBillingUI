@@ -15,7 +15,7 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const from = location.state?.from?.pathname || '/dashboard';
+  const from = location.state?.from?.pathname || '/';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
