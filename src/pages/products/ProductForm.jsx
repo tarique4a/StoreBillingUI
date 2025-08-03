@@ -61,9 +61,10 @@ const ProductForm = () => {
   };
 
   const onSubmit = async (data) => {
+    console.log('ProductForm onSubmit called with data:', data);
     try {
       setLoading(true);
-      
+
       // Convert string numbers to actual numbers
       const formattedData = {
         ...data,
@@ -72,18 +73,23 @@ const ProductForm = () => {
         unitCostPrice: parseFloat(data.unitCostPrice),
         mrp: parseFloat(data.mrp),
       };
-      
+
       if (isEdit) {
+        console.log('Updating product with ID:', id);
         await productAPI.update(id, formattedData);
         toast.success('Product updated successfully');
       } else {
-        await productAPI.create(formattedData);
+        console.log('Creating new product');
+        const response = await productAPI.create(formattedData);
+        console.log('Product created successfully:', response.data);
         toast.success('Product created successfully');
       }
       
       navigate('/products');
     } catch (error) {
-      const message = error.response?.data?.message || 'Operation failed';
+      console.error('Product form submission error:', error);
+      console.error('Error response:', error.response?.data);
+      const message = error.response?.data?.message || error.message || 'Operation failed';
       toast.error(message);
     } finally {
       setLoading(false);

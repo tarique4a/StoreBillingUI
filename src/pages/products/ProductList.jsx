@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   PlusIcon, 
@@ -18,27 +18,54 @@ import EmptyState from '../../components/common/EmptyState';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 
 const ProductList = () => {
+  console.log('ProductList component rendered');
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, product: null });
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    loadProducts();
-  }, []);
+  const loadProducts = useCallback(async () => {
+    console.log('loadProducts called, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
 
-  const loadProducts = async () => {
+    // Prevent multiple simultaneous calls
+    if (hasLoaded || isLoading) {
+      console.log('Skipping loadProducts - already loaded or loading');
+      return;
+    }
+
     try {
+      setIsLoading(true);
       setLoading(true);
+      console.log('Making API call to productAPI.search([])');
       const response = await productAPI.search([]);
+      console.log('API call successful, response:', response.data);
       setProducts(response.data);
+      setHasLoaded(true);
     } catch (error) {
-      toast.error('Failed to load products');
+      console.error('loadProducts error:', error);
+      // Only show error toast if it's not a network error (backend not running)
+      if (error.code !== 'ERR_NETWORK') {
+        toast.error('Failed to load products');
+      } else {
+        console.warn('Backend server not running. Please start the backend server.');
+      }
       console.error('Error loading products:', error);
+      setHasLoaded(true); // Prevent infinite retries
     } finally {
       setLoading(false);
+      setIsLoading(false);
     }
-  };
+  }, [hasLoaded, isLoading]);
+
+  useEffect(() => {
+    console.log('ProductList useEffect triggered, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
+    if (!hasLoaded && !isLoading) {
+      loadProducts();
+    }
+  }, [hasLoaded, isLoading, loadProducts]);
 
   const handleSearch = async (term) => {
     setSearchTerm(term);

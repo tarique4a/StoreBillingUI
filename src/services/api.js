@@ -106,7 +106,7 @@ export const productAPI = {
   create: (data) => api.post('/product/create', data),
   update: (id, data) => api.put(`/product/update/${id}`, data),
   delete: (id) => api.put(`/product/delete/${id}`),
-  search: (criteria) => api.get('/product/search', { data: criteria }),
+  search: (criteria) => api.post('/product/search', criteria),
 };
 
 // Transaction API
