@@ -1,47 +1,97 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   EyeIcon,
   CreditCardIcon,
   ArrowUturnLeftIcon,
-  FunnelIcon,
   DocumentTextIcon,
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
-import { formatDate, formatCurrency, TRANSACTION_STATUS } from '../../services/api';
+import { transactionAPI, createSearchCriteria, SEARCH_OPERATIONS, formatDate, formatCurrency, TRANSACTION_STATUS } from '../../services/api';
 import { LoadingOverlay } from '../../components/common/LoadingSpinner';
-import SearchInput from '../../components/common/SearchInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
+import FieldSearchInput from '../../components/common/FieldSearchInput';
+import { FilterBuilder } from '../../components/filters';
+import { TRANSACTION_FILTER_FIELDS, TRANSACTION_SEARCH_FIELDS } from '../../config/filterConfigs';
 
 const TransactionList = () => {
   const [transactions, setTransactions] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState('transactionId'); // Default to transaction ID
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const abortControllerRef = useRef(null);
+
+  // Search field options
+  const searchFieldOptions = [
+    { value: 'transactionId', label: 'Transaction ID' },
+    { value: 'customerName', label: 'Customer Name' },
+    { value: 'status', label: 'Status' },
+    { value: 'paymentMethod', label: 'Payment Method' }
+  ];
 
   useEffect(() => {
-    loadTransactions();
-  }, []);
+    if (!hasLoaded && !loading) {
+      loadTransactions();
+    }
+  }, [hasLoaded, loading]);
 
   const loadTransactions = async () => {
+    // Prevent multiple simultaneous calls
+    if (hasLoaded || loading) {
+      return;
+    }
+
     try {
       setLoading(true);
-      // Since there's no search endpoint for transactions, we'll need to implement this
-      // For now, we'll show a placeholder
-      setTransactions([]);
+      const response = await transactionAPI.search([]);
+      setTransactions(response.data);
+      setHasLoaded(true);
     } catch (error) {
-      toast.error('Failed to load transactions');
-      console.error('Error loading transactions:', error);
+      console.error('Failed to load transactions:', error);
+      // Only show error toast if it's not a network error (backend not running)
+      if (error.code !== 'ERR_NETWORK') {
+        toast.error('Failed to load transactions');
+      } else {
+        console.warn('Backend server not running. Please start the backend server.');
+      }
+      setHasLoaded(true); // Prevent infinite retries
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = async (term) => {
+  const handleSearch = async (term, searchCriteria = []) => {
     setSearchTerm(term);
-    // Implement search logic when backend supports it
+
+    try {
+      setLoading(true);
+
+      let response;
+      if (searchCriteria.length > 0) {
+        // Advanced filter search
+        response = await transactionAPI.search(searchCriteria);
+      } else if (term && term.trim()) {
+        // Simple search across default fields
+        const defaultCriteria = TRANSACTION_SEARCH_FIELDS.map(field =>
+          createSearchCriteria(field, term.trim(), SEARCH_OPERATIONS.CONTAINS)
+        );
+        response = await transactionAPI.search(defaultCriteria);
+      } else {
+        // Load all transactions
+        response = await transactionAPI.search([]);
+      }
+
+      setTransactions(response.data);
+    } catch (error) {
+      toast.error('Search failed');
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -132,19 +182,14 @@ const TransactionList = () => {
       {/* Search and Filters */}
       <div className="card">
         <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <SearchInput
-                placeholder="Search transactions by customer, ID, or amount..."
-                onSearch={handleSearch}
-                className="w-full"
-              />
-            </div>
-            <button className="btn-secondary">
-              <FunnelIcon className="h-5 w-5 mr-2" />
-              Filters
-            </button>
-          </div>
+          <FilterBuilder
+            availableFields={TRANSACTION_FILTER_FIELDS}
+            defaultSearchFields={TRANSACTION_SEARCH_FIELDS}
+            onSearch={handleSearch}
+            searchPlaceholder="Search transactions by customer, ID, or amount..."
+            showSimpleSearch={true}
+            showAdvancedFilters={true}
+          />
         </div>
       </div>
 

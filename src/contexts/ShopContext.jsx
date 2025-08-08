@@ -64,14 +64,17 @@ export const ShopProvider = ({ children }) => {
       setLoading(true);
       const response = await shopAPI.create(shopData);
       const newShop = response.data;
-      
+
+      // Check if this is the first shop before updating state
+      const isFirstShop = shops.length === 0;
+
       setShops(prev => [...prev, newShop]);
-      
+
       // If this is the first shop, set it as current
-      if (shops.length === 0) {
+      if (isFirstShop) {
         setCurrentShop(newShop);
       }
-      
+
       toast.success('Shop created successfully');
       return { success: true, shop: newShop };
     } catch (error) {
@@ -113,15 +116,17 @@ export const ShopProvider = ({ children }) => {
     try {
       setLoading(true);
       await shopAPI.delete(shopId);
-      
-      setShops(prev => prev.filter(shop => shop.id !== shopId));
-      
+
+      // Calculate remaining shops before updating state
+      const remainingShops = shops.filter(shop => shop.id !== shopId);
+
+      setShops(remainingShops);
+
       // If current shop is deleted, switch to another shop
       if (currentShop?.id === shopId) {
-        const remainingShops = shops.filter(shop => shop.id !== shopId);
         setCurrentShop(remainingShops.length > 0 ? remainingShops[0] : null);
       }
-      
+
       toast.success('Shop deleted successfully');
       return { success: true };
     } catch (error) {
@@ -149,8 +154,21 @@ export const ShopProvider = ({ children }) => {
     }
   };
 
-  const getShopById = (shopId) => {
-    return shops.find(shop => shop.id === shopId);
+  const getShopById = async (shopId) => {
+    // First check if shop exists in local state
+    const localShop = shops.find(shop => shop.id === shopId);
+    if (localShop) {
+      return localShop;
+    }
+
+    // If not found locally, fetch from API
+    try {
+      const response = await shopAPI.getById(shopId);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch shop by ID:', error);
+      throw error;
+    }
   };
 
   const value = {

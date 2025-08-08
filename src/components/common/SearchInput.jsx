@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 const SearchInput = ({
@@ -6,20 +6,49 @@ const SearchInput = ({
   onSearch,
   debounceMs = 300,
   className = '',
+  value = '',
 }) => {
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState(value);
+  const timerRef = useRef(null);
+  const isMountedRef = useRef(true);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
+  }, []);
+
+  // Update internal state when external value changes
+  useEffect(() => {
+    setSearchTerm(value);
+  }, [value]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      onSearch(searchTerm);
+    // Clear previous timer
+    if (timerRef.current) {
+      clearTimeout(timerRef.current);
+    }
+
+    timerRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        onSearch(searchTerm);
+      }
     }, debounceMs);
 
-    return () => clearTimeout(timer);
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+      }
+    };
   }, [searchTerm, onSearch, debounceMs]);
 
-  const handleClear = () => {
+  const handleClear = useCallback(() => {
     setSearchTerm('');
-  };
+  }, []);
 
   return (
     <div className={`relative ${className}`}>

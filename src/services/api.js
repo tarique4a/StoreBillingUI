@@ -17,9 +17,6 @@ api.interceptors.request.use(
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-      console.log('API Request:', config.method?.toUpperCase(), config.url, 'with token');
-    } else {
-      console.log('API Request:', config.method?.toUpperCase(), config.url, 'without token');
     }
     return config;
   },
@@ -31,18 +28,14 @@ api.interceptors.request.use(
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log('API Response:', response.status, response.config.method?.toUpperCase(), response.config.url);
     return response;
   },
   (error) => {
-    console.error('API Error:', error.response?.status, error.config?.method?.toUpperCase(), error.config?.url, error.response?.data || error.message);
-
     const message = error.response?.data?.message || error.message || 'An error occurred';
 
     // Handle different error status codes
     switch (error.response?.status) {
       case 401:
-        console.log('401 Unauthorized - redirecting to login');
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
@@ -94,30 +87,31 @@ export const shopAPI = {
 
 // Customer API
 export const customerAPI = {
-  getById: (id) => api.get(`/customer/${id}`),
-  create: (data) => api.post('/customer/create', data),
-  update: (id, data) => api.put(`/customer/update/${id}`, data),
-  search: (criteria) => api.post('/customer/search', criteria),
+  getById: (id, config = {}) => api.get(`/customer/${id}`, config),
+  create: (data, config = {}) => api.post('/customer/create', data, config),
+  update: (id, data, config = {}) => api.put(`/customer/update/${id}`, data, config),
+  search: (criteria, config = {}) => api.post('/customer/search', criteria, config),
 };
 
 // Product API
 export const productAPI = {
-  getById: (id) => api.get(`/product/${id}`),
-  create: (data) => api.post('/product/create', data),
-  update: (id, data) => api.put(`/product/update/${id}`, data),
-  delete: (id) => api.put(`/product/delete/${id}`),
-  search: (criteria) => api.post('/product/search', criteria),
+  getById: (id, config = {}) => api.get(`/product/${id}`, config),
+  create: (data, config = {}) => api.post('/product/create', data, config),
+  update: (id, data, config = {}) => api.put(`/product/update/${id}`, data, config),
+  delete: (id, config = {}) => api.put(`/product/delete/${id}`, config),
+  search: (criteria, config = {}) => api.post('/product/search', criteria, config),
 };
 
 // Transaction API
 export const transactionAPI = {
-  getById: (id) => api.get(`/transaction/${id}`),
-  create: (data) => api.post('/transaction/create', data),
-  update: (id, data, isCompleted = false) => 
-    api.put(`/transaction/update/${id}?isCompleted=${isCompleted}`, data),
-  delete: (id) => api.put(`/transaction/delete/${id}`),
-  return: (data) => api.put('/transaction/return', data),
-  pay: (id, data) => api.put(`/transaction/pay/${id}`, data),
+  getById: (id, config = {}) => api.get(`/transaction/${id}`, config),
+  create: (data, config = {}) => api.post('/transaction/create', data, config),
+  update: (id, data, isCompleted = false, config = {}) =>
+    api.put(`/transaction/update/${id}?isCompleted=${isCompleted}`, data, config),
+  delete: (id, config = {}) => api.put(`/transaction/delete/${id}`, config),
+  return: (data, config = {}) => api.put('/transaction/return', data, config),
+  pay: (id, data, config = {}) => api.put(`/transaction/pay/${id}`, data, config),
+  search: (criteria, config = {}) => api.post('/transaction/search', criteria, config),
 };
 
 // Search operations enum

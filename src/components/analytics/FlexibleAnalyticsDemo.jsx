@@ -56,7 +56,6 @@ const FlexibleAnalyticsDemo = () => {
         response: response.data,
       });
     } catch (error) {
-      console.error('Error executing analytics query:', error);
       setResults({
         error: error.message,
       });

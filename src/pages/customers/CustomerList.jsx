@@ -3,91 +3,118 @@ import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   PencilIcon,
-  EyeIcon,
-  FunnelIcon
+  EyeIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
 import { customerAPI, createSearchCriteria, SEARCH_OPERATIONS, formatDate } from '../../services/api';
 import { LoadingOverlay } from '../../components/common/LoadingSpinner';
-import SearchInput from '../../components/common/SearchInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
+import FieldSearchInput from '../../components/common/FieldSearchInput';
+import { FilterBuilder } from '../../components/filters';
+import { CUSTOMER_FILTER_FIELDS } from '../../config/filterConfigs';
 const CustomerList = () => {
-  console.log('CustomerList component rendered');
 
   const [customers, setCustomers] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState('name'); // Default to name field
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+
+  // Search field options
+  const searchFieldOptions = [
+    { value: 'name', label: 'Name' },
+    { value: 'email', label: 'Email' },
+    { value: 'phoneNo', label: 'Phone' },
+    { value: 'address', label: 'Address' },
+    { value: 'city', label: 'City' }
+  ];
 
   const loadCustomers = useCallback(async () => {
-    console.log('loadCustomers called, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
-
     // Prevent multiple simultaneous calls
-    if (hasLoaded || isLoading) {
-      console.log('Skipping loadCustomers - already loaded or loading');
+    if (hasLoaded || loading) {
       return;
     }
 
     try {
-      setIsLoading(true);
       setLoading(true);
-      // Since there's no getAll endpoint, we'll search with empty criteria
-      console.log('Making API call to customerAPI.search([])');
       const response = await customerAPI.search([]);
-      console.log('API call successful, response:', response.data);
       setCustomers(response.data);
       setHasLoaded(true);
     } catch (error) {
-      console.error('loadCustomers error:', error);
+      console.error('Failed to load customers:', error);
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load customers');
       } else {
         console.warn('Backend server not running. Please start the backend server.');
       }
-      console.error('Error loading customers:', error);
       setHasLoaded(true); // Prevent infinite retries
     } finally {
       setLoading(false);
-      setIsLoading(false);
     }
-  }, [hasLoaded, isLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, loading]);
 
   useEffect(() => {
-    console.log('CustomerList useEffect triggered, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
-    if (!hasLoaded && !isLoading) {
+    if (!hasLoaded && !loading) {
       loadCustomers();
     }
-  }, [hasLoaded, isLoading, loadCustomers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, loading, loadCustomers]);
 
-  const handleSearch = async (term) => {
+  const handleSearch = useCallback(async (term, selectedField, searchCriteria = []) => {
+    console.log('🔍 handleSearch called with:', { term, selectedField, searchCriteria });
     setSearchTerm(term);
-    if (!term.trim()) {
-      loadCustomers();
-      return;
-    }
 
     try {
+      console.log('⏳ Setting loading to true');
       setLoading(true);
-      const searchCriteria = [
-        createSearchCriteria('name', term, SEARCH_OPERATIONS.CONTAINS),
-        createSearchCriteria('email', term, SEARCH_OPERATIONS.CONTAINS),
-        createSearchCriteria('phoneNo', term, SEARCH_OPERATIONS.CONTAINS),
-      ];
-      const response = await customerAPI.search(searchCriteria);
+
+      let response;
+
+      if (searchCriteria.length > 0) {
+        // Advanced filter search
+        console.log('🎯 Advanced filter search:', searchCriteria);
+        response = await customerAPI.search(searchCriteria);
+      } else if (term && term.trim()) {
+        // Simple search on selected field only
+        const fieldToSearch = selectedField || searchField || 'name';
+        const searchCriteriaForField = [
+          createSearchCriteria(fieldToSearch, term.trim(), SEARCH_OPERATIONS.CONTAINS)
+        ];
+        console.log('🔤 Simple search:', { fieldToSearch, term: term.trim(), criteria: searchCriteriaForField });
+        response = await customerAPI.search(searchCriteriaForField);
+      } else {
+        // Load all customers
+        console.log('📋 Loading all customers');
+        response = await customerAPI.search([]);
+      }
+
+      console.log('✅ Search response:', response);
       setCustomers(response.data);
+      console.log('📊 Customers set:', response.data?.length || 0);
     } catch (error) {
-      toast.error('Search failed');
-      console.error('Search error:', error);
+      console.error('❌ Search error:', error);
+      toast.error('Search failed: ' + (error.response?.data?.message || error.message));
     } finally {
+      console.log('✅ Setting loading to false');
       setLoading(false);
     }
-  };
+  }, [searchField]);
 
+  const handleFieldSearchInput = useCallback((term, field) => {
+    handleSearch(term, field, []);
+  }, [handleSearch]);
 
+  const handleFieldChange = useCallback((field) => {
+    setSearchField(field);
+  }, []);
+
+  const handleFilterSearch = useCallback((criteria) => {
+    handleSearch('', searchField, criteria);
+  }, [handleSearch, searchField]);
 
   return (
     <div className="space-y-6">
@@ -107,19 +134,32 @@ const CustomerList = () => {
 
       {/* Search and Filters */}
       <div className="card">
-        <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <SearchInput
-                placeholder="Search customers by name, email, or phone..."
-                onSearch={handleSearch}
-                className="w-full"
-              />
-            </div>
-            <button className="btn-secondary">
-              <FunnelIcon className="h-5 w-5 mr-2" />
-              Filters
-            </button>
+        <div className="card-body space-y-4">
+          {/* Simple Search with Field Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Customers
+            </label>
+            <FieldSearchInput
+              placeholder="Search customers"
+              onSearch={handleFieldSearchInput}
+              value={searchTerm}
+              searchField={searchField}
+              onFieldChange={handleFieldChange}
+              searchFields={searchFieldOptions}
+              defaultField="name"
+              className="w-full max-w-md"
+            />
+          </div>
+
+          {/* Advanced Filters */}
+          <div>
+            <FilterBuilder
+              availableFields={CUSTOMER_FILTER_FIELDS}
+              onSearch={handleFilterSearch}
+              showSimpleSearch={false}
+              showAdvancedFilters={true}
+            />
           </div>
         </div>
       </div>

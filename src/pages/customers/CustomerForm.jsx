@@ -56,18 +56,14 @@ const CustomerForm = () => {
   };
 
   const onSubmit = async (data) => {
-    console.log('CustomerForm onSubmit called with data:', data);
     try {
       setLoading(true);
 
       if (isEdit) {
-        console.log('Updating customer with ID:', id);
         await customerAPI.update(id, data);
         toast.success('Customer updated successfully');
       } else {
-        console.log('Creating new customer');
         const response = await customerAPI.create(data);
-        console.log('Customer created successfully:', response.data);
         toast.success('Customer created successfully');
       }
 

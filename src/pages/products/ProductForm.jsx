@@ -61,7 +61,6 @@ const ProductForm = () => {
   };
 
   const onSubmit = async (data) => {
-    console.log('ProductForm onSubmit called with data:', data);
     try {
       setLoading(true);
 
@@ -75,13 +74,10 @@ const ProductForm = () => {
       };
 
       if (isEdit) {
-        console.log('Updating product with ID:', id);
         await productAPI.update(id, formattedData);
         toast.success('Product updated successfully');
       } else {
-        console.log('Creating new product');
         const response = await productAPI.create(formattedData);
-        console.log('Product created successfully:', response.data);
         toast.success('Product created successfully');
       }
       

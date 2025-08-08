@@ -1,94 +1,165 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  PlusIcon, 
-  PencilIcon, 
+import {
+  PlusIcon,
+  PencilIcon,
   TrashIcon,
   EyeIcon,
-  FunnelIcon,
   CubeIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
 import { productAPI, createSearchCriteria, SEARCH_OPERATIONS, formatDate, formatCurrency } from '../../services/api';
 import { LoadingOverlay } from '../../components/common/LoadingSpinner';
-import SearchInput from '../../components/common/SearchInput';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
+import FieldSearchInput from '../../components/common/FieldSearchInput';
+import { FilterBuilder } from '../../components/filters';
+import { PRODUCT_FILTER_FIELDS } from '../../config/filterConfigs';
 
 const ProductList = () => {
-  console.log('ProductList component rendered');
 
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchField, setSearchField] = useState('name'); // Default to name field
   const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, product: null });
   const [hasLoaded, setHasLoaded] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const abortControllerRef = useRef(null);
+
+  // Search field options
+  const searchFieldOptions = [
+    { value: 'name', label: 'Product Name' },
+    { value: 'brand', label: 'Brand' },
+    { value: 'category', label: 'Category' },
+    { value: 'description', label: 'Description' }
+  ];
 
   const loadProducts = useCallback(async () => {
-    console.log('loadProducts called, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
-
     // Prevent multiple simultaneous calls
-    if (hasLoaded || isLoading) {
-      console.log('Skipping loadProducts - already loaded or loading');
+    if (hasLoaded || loading) {
       return;
     }
 
+    // Cancel previous request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller
+    abortControllerRef.current = new AbortController();
+
     try {
-      setIsLoading(true);
       setLoading(true);
-      console.log('Making API call to productAPI.search([])');
-      const response = await productAPI.search([]);
-      console.log('API call successful, response:', response.data);
-      setProducts(response.data);
-      setHasLoaded(true);
+      const response = await productAPI.search([], {
+        signal: abortControllerRef.current.signal
+      });
+
+      // Check if component is still mounted and request wasn't aborted
+      if (!abortControllerRef.current.signal.aborted) {
+        setProducts(response.data);
+        setHasLoaded(true);
+      }
     } catch (error) {
-      console.error('loadProducts error:', error);
+      // Don't handle aborted requests
+      if (error.name === 'AbortError') {
+        return;
+      }
+
+      console.error('Failed to load products:', error);
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load products');
       } else {
         console.warn('Backend server not running. Please start the backend server.');
       }
-      console.error('Error loading products:', error);
       setHasLoaded(true); // Prevent infinite retries
     } finally {
+      // Always set loading to false, regardless of abort status
       setLoading(false);
-      setIsLoading(false);
     }
-  }, [hasLoaded, isLoading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, loading]);
 
   useEffect(() => {
-    console.log('ProductList useEffect triggered, hasLoaded:', hasLoaded, 'isLoading:', isLoading);
-    if (!hasLoaded && !isLoading) {
+    if (!hasLoaded && !loading) {
       loadProducts();
     }
-  }, [hasLoaded, isLoading, loadProducts]);
 
-  const handleSearch = async (term) => {
+    // Cleanup on unmount
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasLoaded, loading, loadProducts]);
+
+  const handleSearch = useCallback(async (term, selectedField, searchCriteria = []) => {
     setSearchTerm(term);
-    if (!term.trim()) {
-      loadProducts();
-      return;
+
+    // Cancel previous search request if exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
     }
+
+    // Create new abort controller for search
+    abortControllerRef.current = new AbortController();
 
     try {
       setLoading(true);
-      const searchCriteria = [
-        createSearchCriteria('name', term, SEARCH_OPERATIONS.CONTAINS),
-        createSearchCriteria('brand', term, SEARCH_OPERATIONS.CONTAINS),
-        createSearchCriteria('category', term, SEARCH_OPERATIONS.CONTAINS),
-      ];
-      const response = await productAPI.search(searchCriteria);
-      setProducts(response.data);
+
+      let response;
+      const requestConfig = { signal: abortControllerRef.current.signal };
+
+      if (searchCriteria.length > 0) {
+        // Advanced filter search
+        response = await productAPI.search(searchCriteria, requestConfig);
+      } else if (term && term.trim()) {
+        // Simple search on selected field only
+        const fieldToSearch = selectedField || searchField || 'name';
+        const searchCriteriaForField = [
+          createSearchCriteria(fieldToSearch, term.trim(), SEARCH_OPERATIONS.CONTAINS)
+        ];
+        response = await productAPI.search(searchCriteriaForField, requestConfig);
+      } else {
+        // Load all products
+        response = await productAPI.search([], requestConfig);
+      }
+
+      // Check if request wasn't aborted
+      if (!abortControllerRef.current.signal.aborted) {
+        setProducts(response.data);
+      }
     } catch (error) {
-      toast.error('Search failed');
+      // Don't handle aborted requests
+      if (error.name === 'AbortError') {
+        return;
+      }
+
+      toast.error('Search failed: ' + (error.response?.data?.message || error.message));
       console.error('Search error:', error);
     } finally {
+      // Always set loading to false, regardless of abort status
       setLoading(false);
     }
+  }, [searchField]);
+
+  const handleFieldSearchInput = useCallback((term, field) => {
+    handleSearch(term, field);
+  }, [handleSearch]);
+
+  const handleFieldChange = useCallback((field) => {
+    setSearchField(field);
+    // Re-trigger search with new field if there's a current search term
+    if (searchTerm) {
+      handleSearch(searchTerm, field);
+    }
+  }, [searchTerm, handleSearch]);
+
+  const handleFilterSearch = (criteria) => {
+    handleSearch(searchTerm, searchField, criteria);
   };
 
   const handleDelete = async (product) => {
@@ -128,19 +199,32 @@ const ProductList = () => {
 
       {/* Search and Filters */}
       <div className="card">
-        <div className="card-body">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <SearchInput
-                placeholder="Search products by name, brand, or category..."
-                onSearch={handleSearch}
-                className="w-full"
-              />
-            </div>
-            <button className="btn-secondary">
-              <FunnelIcon className="h-5 w-5 mr-2" />
-              Filters
-            </button>
+        <div className="card-body space-y-4">
+          {/* Simple Search with Field Selector */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Search Products
+            </label>
+            <FieldSearchInput
+              placeholder="Search products"
+              onSearch={handleFieldSearchInput}
+              value={searchTerm}
+              searchField={searchField}
+              onFieldChange={handleFieldChange}
+              searchFields={searchFieldOptions}
+              defaultField="name"
+              className="w-full max-w-md"
+            />
+          </div>
+
+          {/* Advanced Filters */}
+          <div>
+            <FilterBuilder
+              availableFields={PRODUCT_FILTER_FIELDS}
+              onSearch={handleFilterSearch}
+              showSimpleSearch={false}
+              showAdvancedFilters={true}
+            />
           </div>
         </div>
       </div>

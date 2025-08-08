@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 
 const LoadingSpinner = ({ size = 'md', className = '' }) => {
   const sizeClasses = {
@@ -13,7 +13,7 @@ const LoadingSpinner = ({ size = 'md', className = '' }) => {
   );
 };
 
-export const LoadingOverlay = ({ isLoading, children }) => {
+export const LoadingOverlay = memo(({ isLoading, children }) => {
   if (!isLoading) return children;
 
   return (
@@ -27,7 +27,7 @@ export const LoadingOverlay = ({ isLoading, children }) => {
       </div>
     </div>
   );
-};
+});
 
 export const PageLoader = () => {
   return (
@@ -40,4 +40,4 @@ export const PageLoader = () => {
   );
 };
 
-export default LoadingSpinner;
+export default memo(LoadingSpinner);
