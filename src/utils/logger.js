@@ -12,59 +12,50 @@ const LOG_LEVELS = {
 
 class Logger {
   constructor() {
-    // Set log level based on environment
-    this.logLevel = process.env.NODE_ENV === 'production' ? LOG_LEVELS.WARN : LOG_LEVELS.DEBUG;
+    // Disabled logger - no logging in production
   }
 
   error(message, ...args) {
-    if (this.logLevel >= LOG_LEVELS.ERROR) {
-      console.error(`[ERROR] ${message}`, ...args);
-    }
+    // No logging
   }
 
   warn(message, ...args) {
-    if (this.logLevel >= LOG_LEVELS.WARN) {
-      console.warn(`[WARN] ${message}`, ...args);
-    }
+    // No logging
   }
 
   info(message, ...args) {
-    if (this.logLevel >= LOG_LEVELS.INFO) {
-      console.info(`[INFO] ${message}`, ...args);
-    }
+    // No logging
   }
 
   debug(message, ...args) {
-    if (this.logLevel >= LOG_LEVELS.DEBUG) {
-      console.log(`[DEBUG] ${message}`, ...args);
-    }
+    // No logging
   }
 
   // API specific logging
   apiRequest(method, url, data = null) {
-    this.debug(`API Request: ${method.toUpperCase()} ${url}`, data);
+    // No logging
   }
 
   apiResponse(method, url, status, data = null) {
-    this.debug(`API Response: ${method.toUpperCase()} ${url} - ${status}`, data);
+    // No logging
   }
 
   apiError(method, url, error) {
-    this.error(`API Error: ${method.toUpperCase()} ${url}`, error);
+    // No logging
   }
 
   // Component lifecycle logging
   componentMount(componentName) {
-    this.debug(`Component mounted: ${componentName}`);
+    // No logging
   }
 
   componentUnmount(componentName) {
-    this.debug(`Component unmounted: ${componentName}`);
+    // No logging
   }
 
   // User action logging
   userAction(action, details = null) {
-    this.info(`User action: ${action}`, details);
+    // No logging
   }
 }
 
