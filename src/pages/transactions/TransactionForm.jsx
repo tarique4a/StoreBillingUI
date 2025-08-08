@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { toast } from 'react-toastify';
@@ -29,6 +29,12 @@ const TransactionForm = () => {
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [selectedProductIndex, setSelectedProductIndex] = useState(null);
+  const [customerSearchTerm, setCustomerSearchTerm] = useState('');
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [productsLoading, setProductsLoading] = useState(false);
+  const [allCustomers, setAllCustomers] = useState([]);
+  const [searchedCustomers, setSearchedCustomers] = useState([]);
 
   const {
     register,
@@ -62,26 +68,82 @@ const TransactionForm = () => {
     return sum + (quantity * price);
   }, 0);
 
+  // Debounced search function
+  const debouncedSearchCustomers = useCallback(
+    useMemo(() => {
+      let timeoutId;
+      return (searchTerm) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(async () => {
+          if (searchTerm.trim().length >= 2) {
+            console.log('TransactionForm: Searching customers with term:', searchTerm);
+            try {
+              setCustomersLoading(true);
+              // Use a special search criteria that the backend can handle with OR logic
+              const searchCriteria = [
+                { key: "searchTerm", value: searchTerm, operation: "CONTAINS" }
+              ];
+              const response = await customerAPI.search(searchCriteria);
+              console.log('TransactionForm: Search results:', response.data);
+              setSearchedCustomers(response.data);
+            } catch (error) {
+              console.error('TransactionForm: Error searching customers:', error);
+              toast.error('Failed to search customers. Please try again.');
+              setSearchedCustomers([]);
+            } finally {
+              setCustomersLoading(false);
+            }
+          } else if (searchTerm.trim().length === 0) {
+            // Show all customers when search is empty
+            setSearchedCustomers(allCustomers);
+          } else {
+            // Less than 2 characters, show empty results
+            setSearchedCustomers([]);
+          }
+        }, 300); // 300ms debounce delay
+      };
+    }, [allCustomers]),
+    [allCustomers]
+  );
+
   useEffect(() => {
+    console.log('TransactionForm: Component mounted, loading data...');
     loadCustomers();
     loadProducts();
   }, []);
 
   const loadCustomers = async () => {
+    console.log('TransactionForm: Loading all customers...');
     try {
+      setCustomersLoading(true);
       const response = await customerAPI.search([]);
+      console.log('TransactionForm: All customers loaded:', response.data);
       setCustomers(response.data);
+      setAllCustomers(response.data);
+      setSearchedCustomers(response.data); // Initially show all customers
     } catch (error) {
-      console.error('Error loading customers:', error);
+      console.error('TransactionForm: Error loading customers:', error);
+      toast.error('Failed to load customers. Please try again.');
+      setCustomers([]);
+      setAllCustomers([]);
+      setSearchedCustomers([]);
+    } finally {
+      setCustomersLoading(false);
     }
   };
 
   const loadProducts = async () => {
+    console.log('TransactionForm: Loading products...');
     try {
+      setProductsLoading(true);
       const response = await productAPI.search([]);
+      console.log('TransactionForm: Products loaded:', response.data);
       setProducts(response.data);
     } catch (error) {
-      console.error('Error loading products:', error);
+      console.error('TransactionForm: Error loading products:', error);
+      toast.error('Failed to load products. Please try again.');
+    } finally {
+      setProductsLoading(false);
     }
   };
 
@@ -111,8 +173,10 @@ const TransactionForm = () => {
   };
 
   const handleCustomerSelect = (customer) => {
+    console.log('TransactionForm: Customer selected:', customer);
     setValue('customerId', customer.id);
     setShowCustomerModal(false);
+    setCustomerSearchTerm('');
   };
 
   const handleProductSelect = (product) => {
@@ -146,6 +210,18 @@ const TransactionForm = () => {
     const product = products.find(p => p.id === productId);
     return product ? product.name : 'Select Product';
   };
+
+  // Use searched customers for display
+  const displayCustomers = searchedCustomers;
+
+  console.log('TransactionForm: allCustomers:', allCustomers.length, 'displayCustomers:', displayCustomers.length, 'searchTerm:', customerSearchTerm);
+
+  // Filter products based on search term
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    product.brand.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+    product.category.toLowerCase().includes(productSearchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -185,7 +261,10 @@ const TransactionForm = () => {
                   />
                   <button
                     type="button"
-                    onClick={() => setShowCustomerModal(true)}
+                    onClick={() => {
+                      console.log('TransactionForm: Opening customer modal, customers available:', customers.length);
+                      setShowCustomerModal(true);
+                    }}
                     className="btn-secondary rounded-l-none border-l-0"
                   >
                     <MagnifyingGlassIcon className="h-5 w-5" />
@@ -337,58 +416,120 @@ const TransactionForm = () => {
       {/* Customer Selection Modal */}
       <Modal
         isOpen={showCustomerModal}
-        onClose={() => setShowCustomerModal(false)}
+        onClose={() => {
+          setShowCustomerModal(false);
+          setCustomerSearchTerm('');
+        }}
         title="Select Customer"
         size="lg"
       >
         <div className="space-y-4">
-          {customers.map((customer) => (
-            <div
-              key={customer.id}
-              onClick={() => handleCustomerSelect(customer)}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium text-gray-900">{customer.name}</h3>
-                  <p className="text-sm text-gray-500">{customer.email}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">{customer.phoneNo}</p>
-                  <p className="text-sm text-gray-500">{customer.city}</p>
-                </div>
+          {/* Search Input */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search customers by name, email, or phone... (min 2 characters)"
+              className="form-input pl-10"
+              value={customerSearchTerm}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCustomerSearchTerm(value);
+                debouncedSearchCustomers(value);
+              }}
+              autoFocus
+            />
+          </div>
+
+          {/* Customer List */}
+          <div className="max-h-96 overflow-y-auto">
+            {customersLoading ? (
+              <div className="text-center py-8">
+                <LoadingSpinner size="md" />
+                <p className="text-gray-500 mt-2">Loading customers...</p>
               </div>
-            </div>
-          ))}
+            ) : displayCustomers.length > 0 ? (
+              displayCustomers.map((customer) => (
+                <div
+                  key={customer.id}
+                  onClick={() => handleCustomerSelect(customer)}
+                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer mb-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{customer.name}</h3>
+                      <p className="text-sm text-gray-500">{customer.email}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm text-gray-500">{customer.phoneNo}</p>
+                      <p className="text-sm text-gray-500">{customer.city}</p>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {customerSearchTerm.length >= 2 ? 'No customers found matching your search.' :
+                 customerSearchTerm.length > 0 ? 'Type at least 2 characters to search...' :
+                 allCustomers.length === 0 ? 'No customers available. Please create customers first.' : 'No customers available.'}
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
 
       {/* Product Selection Modal */}
       <Modal
         isOpen={showProductModal}
-        onClose={() => setShowProductModal(false)}
+        onClose={() => {
+          setShowProductModal(false);
+          setProductSearchTerm('');
+          setSelectedProductIndex(null);
+        }}
         title="Select Product"
         size="lg"
       >
         <div className="space-y-4">
-          {products.map((product) => (
-            <div
-              key={product.id}
-              onClick={() => handleProductSelect(product)}
-              className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-            >
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium text-gray-900">{product.name}</h3>
-                  <p className="text-sm text-gray-500">{product.brand} - {product.category}</p>
+          {/* Search Input */}
+          <div className="relative">
+            <MagnifyingGlassIcon className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search products by name, brand, or category..."
+              className="form-input pl-10"
+              value={productSearchTerm}
+              onChange={(e) => setProductSearchTerm(e.target.value)}
+              autoFocus
+            />
+          </div>
+
+          {/* Product List */}
+          <div className="max-h-96 overflow-y-auto">
+            {filteredProducts.length > 0 ? (
+              filteredProducts.map((product) => (
+                <div
+                  key={product.id}
+                  onClick={() => handleProductSelect(product)}
+                  className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer mb-2"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="font-medium text-gray-900">{product.name}</h3>
+                      <p className="text-sm text-gray-500">{product.brand} - {product.category}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-gray-900">{formatCurrency(product.unitSalePrice)}</p>
+                      <p className="text-sm text-gray-500">Stock: {product.quantity}</p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-medium text-gray-900">{formatCurrency(product.unitSalePrice)}</p>
-                  <p className="text-sm text-gray-500">Stock: {product.quantity}</p>
-                </div>
+              ))
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                {productSearchTerm ? 'No products found matching your search.' : 'No products available.'}
               </div>
-            </div>
-          ))}
+            )}
+          </div>
         </div>
       </Modal>
     </div>
