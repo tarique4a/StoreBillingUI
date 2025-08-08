@@ -51,12 +51,12 @@ const TransactionList = () => {
       setTransactions(response.data);
       setHasLoaded(true);
     } catch (error) {
-      console.error('Failed to load transactions:', error);
+      
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load transactions');
       } else {
-        console.warn('Backend server not running. Please start the backend server.');
+        
       }
       setHasLoaded(true); // Prevent infinite retries
     } finally {
@@ -88,7 +88,7 @@ const TransactionList = () => {
       setTransactions(response.data);
     } catch (error) {
       toast.error('Search failed');
-      console.error('Search error:', error);
+      
     } finally {
       setLoading(false);
     }

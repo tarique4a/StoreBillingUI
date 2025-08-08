@@ -83,8 +83,8 @@ const ProductForm = () => {
       
       navigate('/products');
     } catch (error) {
-      console.error('Product form submission error:', error);
-      console.error('Error response:', error.response?.data);
+      
+      
       const message = error.response?.data?.message || error.message || 'Operation failed';
       toast.error(message);
     } finally {

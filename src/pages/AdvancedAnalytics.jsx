@@ -86,7 +86,7 @@ const AdvancedAnalytics = () => {
       
       setAnalytics(combinedAnalytics);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      
       setError(error.message || 'Failed to load analytics data');
       // Set default empty analytics
       setAnalytics({

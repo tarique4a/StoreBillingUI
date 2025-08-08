@@ -86,7 +86,7 @@ export const AuthProvider = ({ children }) => {
       await authAPI.logout();
     } catch (error) {
       // Even if logout fails on backend, clear local state
-      console.error('Logout error:', error);
+      
     } finally {
       // Clear local state
       localStorage.removeItem('authToken');

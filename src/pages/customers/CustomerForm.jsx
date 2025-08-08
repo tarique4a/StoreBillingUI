@@ -69,8 +69,8 @@ const CustomerForm = () => {
 
       navigate('/customers');
     } catch (error) {
-      console.error('Customer form submission error:', error);
-      console.error('Error response:', error.response?.data);
+      
+      
       const message = error.response?.data?.message || error.message || 'Operation failed';
       toast.error(message);
     } finally {

@@ -43,12 +43,12 @@ const CustomerList = () => {
       setCustomers(response.data);
       setHasLoaded(true);
     } catch (error) {
-      console.error('Failed to load customers:', error);
+      
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load customers');
       } else {
-        console.warn('Backend server not running. Please start the backend server.');
+        
       }
       setHasLoaded(true); // Prevent infinite retries
     } finally {
@@ -65,18 +65,18 @@ const CustomerList = () => {
   }, [hasLoaded, loading, loadCustomers]);
 
   const handleSearch = useCallback(async (term, selectedField, searchCriteria = []) => {
-    console.log('🔍 handleSearch called with:', { term, selectedField, searchCriteria });
+
     setSearchTerm(term);
 
     try {
-      console.log('⏳ Setting loading to true');
+      
       setLoading(true);
 
       let response;
 
       if (searchCriteria.length > 0) {
         // Advanced filter search
-        console.log('🎯 Advanced filter search:', searchCriteria);
+
         response = await customerAPI.search(searchCriteria);
       } else if (term && term.trim()) {
         // Simple search on selected field only
@@ -84,22 +84,22 @@ const CustomerList = () => {
         const searchCriteriaForField = [
           createSearchCriteria(fieldToSearch, term.trim(), SEARCH_OPERATIONS.CONTAINS)
         ];
-        console.log('🔤 Simple search:', { fieldToSearch, term: term.trim(), criteria: searchCriteriaForField });
+
         response = await customerAPI.search(searchCriteriaForField);
       } else {
         // Load all customers
-        console.log('📋 Loading all customers');
+
         response = await customerAPI.search([]);
       }
 
-      console.log('✅ Search response:', response);
+      
       setCustomers(response.data);
-      console.log('📊 Customers set:', response.data?.length || 0);
+
     } catch (error) {
-      console.error('❌ Search error:', error);
+      
       toast.error('Search failed: ' + (error.response?.data?.message || error.message));
     } finally {
-      console.log('✅ Setting loading to false');
+      
       setLoading(false);
     }
   }, [searchField]);

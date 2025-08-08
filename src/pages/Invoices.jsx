@@ -79,7 +79,7 @@ const Invoices = () => {
         totalPages: response.data.totalPages || 0,
       }));
     } catch (error) {
-      console.error('Error loading invoices:', error);
+      
       setInvoices([]);
     } finally {
       setLoading(false);
@@ -91,7 +91,7 @@ const Invoices = () => {
       const response = await invoiceAPI.getStatistics();
       setStatistics(response.data);
     } catch (error) {
-      console.error('Error loading statistics:', error);
+      
     }
   };
 
@@ -121,7 +121,7 @@ const Invoices = () => {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      
       alert('Error downloading PDF. Please try again.');
     }
   };

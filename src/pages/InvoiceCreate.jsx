@@ -59,7 +59,7 @@ const InvoiceCreate = () => {
       const response = await transactionAPI.getById(transactionId);
       setTransaction(response.data);
     } catch (error) {
-      console.error('Error loading transaction:', error);
+      
       alert('Error loading transaction. Please try again.');
       navigate('/transactions');
     } finally {
@@ -107,7 +107,7 @@ const InvoiceCreate = () => {
       alert('Invoice created successfully!');
       navigate(`/invoices/${response.data.id}`);
     } catch (error) {
-      console.error('Error creating invoice:', error);
+      
       alert('Error creating invoice. Please try again.');
     } finally {
       setLoading(false);

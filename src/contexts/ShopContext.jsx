@@ -47,12 +47,12 @@ export const ShopProvider = ({ children }) => {
         }
       }
     } catch (error) {
-      console.error('Failed to load shops:', error);
+      
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load shops');
       } else {
-        console.warn('Backend server not running. Shops will be unavailable.');
+        
       }
     } finally {
       setLoading(false);
@@ -166,7 +166,7 @@ export const ShopProvider = ({ children }) => {
       const response = await shopAPI.getById(shopId);
       return response.data;
     } catch (error) {
-      console.error('Failed to fetch shop by ID:', error);
+      
       throw error;
     }
   };

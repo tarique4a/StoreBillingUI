@@ -77,7 +77,7 @@ const FieldSearchInput = ({
   }, []);
 
   const handleFieldSelect = useCallback((field) => {
-    console.log('🎯 Field selected:', field);
+
     setSelectedField(field.value);
     setIsDropdownOpen(false);
     if (onFieldChange) {

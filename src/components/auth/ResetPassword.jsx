@@ -42,7 +42,7 @@ const ResetPassword = () => {
       await authAPI.validateResetToken(token);
       setTokenValid(true);
     } catch (error) {
-      console.error('Token validation error:', error);
+      
       setTokenValid(false);
       toast.error('Invalid or expired reset link');
     } finally {
@@ -61,7 +61,7 @@ const ResetPassword = () => {
       setResetSuccess(true);
       toast.success('Password reset successfully!');
     } catch (error) {
-      console.error('Reset password error:', error);
+      
       const message = error.response?.data?.message || 'Failed to reset password';
       toast.error(message);
     } finally {

@@ -23,7 +23,7 @@ const ForgotPassword = () => {
       setEmailSent(true);
       toast.success('Password reset email sent successfully!');
     } catch (error) {
-      console.error('Forgot password error:', error);
+      
       // Always show success message for security
       setEmailSent(true);
       toast.success('If the email exists, a password reset link has been sent');

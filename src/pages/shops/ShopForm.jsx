@@ -40,7 +40,7 @@ const ShopForm = () => {
             setFormData(shop);
           }
         } catch (error) {
-          console.error('Failed to load shop:', error);
+          
           // Navigate back if shop not found
           navigate('/dashboard');
         } finally {

@@ -76,7 +76,7 @@ const TransactionForm = () => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(async () => {
           if (searchTerm.trim().length >= 2) {
-            console.log('TransactionForm: Searching customers with term:', searchTerm);
+            
             try {
               setCustomersLoading(true);
               // Use a special search criteria that the backend can handle with OR logic
@@ -84,10 +84,10 @@ const TransactionForm = () => {
                 { key: "searchTerm", value: searchTerm, operation: "CONTAINS" }
               ];
               const response = await customerAPI.search(searchCriteria);
-              console.log('TransactionForm: Search results:', response.data);
+              
               setSearchedCustomers(response.data);
             } catch (error) {
-              console.error('TransactionForm: Error searching customers:', error);
+              
               toast.error('Failed to search customers. Please try again.');
               setSearchedCustomers([]);
             } finally {
@@ -107,22 +107,22 @@ const TransactionForm = () => {
   );
 
   useEffect(() => {
-    console.log('TransactionForm: Component mounted, loading data...');
+    
     loadCustomers();
     loadProducts();
   }, []);
 
   const loadCustomers = async () => {
-    console.log('TransactionForm: Loading all customers...');
+    
     try {
       setCustomersLoading(true);
       const response = await customerAPI.search([]);
-      console.log('TransactionForm: All customers loaded:', response.data);
+      
       setCustomers(response.data);
       setAllCustomers(response.data);
       setSearchedCustomers(response.data); // Initially show all customers
     } catch (error) {
-      console.error('TransactionForm: Error loading customers:', error);
+      
       toast.error('Failed to load customers. Please try again.');
       setCustomers([]);
       setAllCustomers([]);
@@ -133,14 +133,14 @@ const TransactionForm = () => {
   };
 
   const loadProducts = async () => {
-    console.log('TransactionForm: Loading products...');
+    
     try {
       setProductsLoading(true);
       const response = await productAPI.search([]);
-      console.log('TransactionForm: Products loaded:', response.data);
+      
       setProducts(response.data);
     } catch (error) {
-      console.error('TransactionForm: Error loading products:', error);
+      
       toast.error('Failed to load products. Please try again.');
     } finally {
       setProductsLoading(false);
@@ -173,7 +173,7 @@ const TransactionForm = () => {
   };
 
   const handleCustomerSelect = (customer) => {
-    console.log('TransactionForm: Customer selected:', customer);
+    
     setValue('customerId', customer.id);
     setShowCustomerModal(false);
     setCustomerSearchTerm('');
@@ -214,7 +214,7 @@ const TransactionForm = () => {
   // Use searched customers for display
   const displayCustomers = searchedCustomers;
 
-  console.log('TransactionForm: allCustomers:', allCustomers.length, 'displayCustomers:', displayCustomers.length, 'searchTerm:', customerSearchTerm);
+  
 
   // Filter products based on search term
   const filteredProducts = products.filter(product =>
@@ -262,7 +262,7 @@ const TransactionForm = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      console.log('TransactionForm: Opening customer modal, customers available:', customers.length);
+                      
                       setShowCustomerModal(true);
                     }}
                     className="btn-secondary rounded-l-none border-l-0"

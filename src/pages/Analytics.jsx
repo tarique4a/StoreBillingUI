@@ -69,7 +69,7 @@ const Analytics = () => {
 
       setAnalytics(combinedAnalytics);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      
     } finally {
       setLoading(false);
     }

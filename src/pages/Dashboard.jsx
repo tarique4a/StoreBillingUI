@@ -87,7 +87,7 @@ const Dashboard = () => {
 
       setStats(combinedStats);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      
       setError(error.message || 'Failed to load dashboard data');
       // Keep default values on error
       setStats({

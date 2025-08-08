@@ -67,12 +67,12 @@ const ProductList = () => {
         return;
       }
 
-      console.error('Failed to load products:', error);
+      
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load products');
       } else {
-        console.warn('Backend server not running. Please start the backend server.');
+        
       }
       setHasLoaded(true); // Prevent infinite retries
     } finally {
@@ -139,7 +139,7 @@ const ProductList = () => {
       }
 
       toast.error('Search failed: ' + (error.response?.data?.message || error.message));
-      console.error('Search error:', error);
+      
     } finally {
       // Always set loading to false, regardless of abort status
       setLoading(false);
@@ -169,7 +169,7 @@ const ProductList = () => {
       loadProducts();
     } catch (error) {
       toast.error('Failed to delete product');
-      console.error('Delete error:', error);
+      
     }
   };
 
