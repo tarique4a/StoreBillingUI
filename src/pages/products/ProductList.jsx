@@ -24,7 +24,6 @@ const ProductList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchField, setSearchField] = useState('name'); // Default to name field
 
-  const [hasLoaded, setHasLoaded] = useState(false);
   const abortControllerRef = useRef(null);
 
   // Search field options
@@ -35,11 +34,6 @@ const ProductList = () => {
   ];
 
   const loadProducts = useCallback(async () => {
-    // Prevent multiple simultaneous calls
-    if (hasLoaded || loading) {
-      return;
-    }
-
     // Cancel previous request if exists
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -57,7 +51,6 @@ const ProductList = () => {
       // Check if component is still mounted and request wasn't aborted
       if (!abortControllerRef.current.signal.aborted) {
         setProducts(response.data);
-        setHasLoaded(true);
       }
     } catch (error) {
       // Don't handle aborted requests
@@ -65,25 +58,22 @@ const ProductList = () => {
         return;
       }
 
-      
+
       // Only show error toast if it's not a network error (backend not running)
       if (error.code !== 'ERR_NETWORK') {
         toast.error('Failed to load products');
       } else {
-        
+
       }
-      setHasLoaded(true); // Prevent infinite retries
     } finally {
       // Always set loading to false, regardless of abort status
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLoaded, loading]);
+  }, []);
 
   useEffect(() => {
-    if (!hasLoaded && !loading) {
-      loadProducts();
-    }
+    // Load products when component mounts
+    loadProducts();
 
     // Cleanup on unmount
     return () => {
@@ -91,8 +81,7 @@ const ProductList = () => {
         abortControllerRef.current.abort();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasLoaded, loading, loadProducts]);
+  }, [loadProducts]);
 
   const handleSearch = useCallback(async (term, selectedField, searchCriteria = []) => {
     setSearchTerm(term);
