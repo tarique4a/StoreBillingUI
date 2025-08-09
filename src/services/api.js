@@ -98,7 +98,6 @@ export const productAPI = {
   getById: (id, config = {}) => api.get(`/product/${id}`, config),
   create: (data, config = {}) => api.post('/product/create', data, config),
   update: (id, data, config = {}) => api.put(`/product/update/${id}`, data, config),
-  delete: (id, config = {}) => api.put(`/product/delete/${id}`, config),
   search: (criteria, config = {}) => api.post('/product/search', criteria, config),
 };
 

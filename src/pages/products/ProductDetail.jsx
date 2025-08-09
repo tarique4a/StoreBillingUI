@@ -4,7 +4,6 @@ import { toast } from 'react-toastify';
 import {
   ArrowLeftIcon,
   PencilIcon,
-  TrashIcon,
   CubeIcon,
   TagIcon,
   CurrencyDollarIcon,
@@ -14,14 +13,14 @@ import {
 import { productAPI, formatDate, formatCurrency } from '../../services/api';
 import { PageLoader } from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
+
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [deleteDialog, setDeleteDialog] = useState(false);
+
 
   useEffect(() => {
     loadProduct();
@@ -40,15 +39,7 @@ const ProductDetail = () => {
     }
   };
 
-  const handleDelete = async () => {
-    try {
-      await productAPI.delete(id);
-      toast.success('Product deleted successfully');
-      navigate('/products');
-    } catch (error) {
-      toast.error('Failed to delete product');
-    }
-  };
+
 
   if (loading) {
     return <PageLoader />;
@@ -99,13 +90,7 @@ const ProductDetail = () => {
             <PencilIcon className="h-5 w-5 mr-2" />
             Edit
           </Link>
-          <button
-            onClick={() => setDeleteDialog(true)}
-            className="btn-danger"
-          >
-            <TrashIcon className="h-5 w-5 mr-2" />
-            Delete
-          </button>
+
         </div>
       </div>
 
@@ -281,16 +266,7 @@ const ProductDetail = () => {
         </div>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={deleteDialog}
-        onClose={() => setDeleteDialog(false)}
-        onConfirm={handleDelete}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${product.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        type="danger"
-      />
+
     </div>
   );
 };

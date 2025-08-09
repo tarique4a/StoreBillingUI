@@ -73,8 +73,9 @@ export const PRODUCT_FILTER_FIELDS = [
   createFilterField('brand', 'Brand', FILTER_FIELD_TYPES.TEXT),
   createFilterField('category', 'Category', FILTER_FIELD_TYPES.TEXT),
   createFilterField('quantity', 'Quantity', FILTER_FIELD_TYPES.NUMBER),
-  createFilterField('unitPrice', 'Unit Price', FILTER_FIELD_TYPES.NUMBER),
-  createFilterField('description', 'Description', FILTER_FIELD_TYPES.TEXT)
+  createFilterField('unitSalePrice', 'Unit Sale Price', FILTER_FIELD_TYPES.NUMBER),
+  createFilterField('unitCostPrice', 'Unit Cost Price', FILTER_FIELD_TYPES.NUMBER),
+  createFilterField('mrp', 'MRP', FILTER_FIELD_TYPES.NUMBER)
 ];
 
 export const PRODUCT_SEARCH_FIELDS = ['name', 'brand', 'category'];

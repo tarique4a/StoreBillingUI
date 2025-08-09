@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   PencilIcon,
-  TrashIcon,
   EyeIcon,
   CubeIcon
 } from '@heroicons/react/24/outline';
@@ -13,10 +12,10 @@ import { productAPI, createSearchCriteria, SEARCH_OPERATIONS, formatDate, format
 import { LoadingOverlay } from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
-import ConfirmDialog from '../../components/common/ConfirmDialog';
+
 import FieldSearchInput from '../../components/common/FieldSearchInput';
 import { FilterBuilder } from '../../components/filters';
-import { PRODUCT_FILTER_FIELDS } from '../../config/filterConfigs';
+import { PRODUCT_FILTER_FIELDS, PRODUCT_SEARCH_FIELDS } from '../../config/filterConfigs';
 
 const ProductList = () => {
 
@@ -24,7 +23,7 @@ const ProductList = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchField, setSearchField] = useState('name'); // Default to name field
-  const [deleteDialog, setDeleteDialog] = useState({ isOpen: false, product: null });
+
   const [hasLoaded, setHasLoaded] = useState(false);
   const abortControllerRef = useRef(null);
 
@@ -32,8 +31,7 @@ const ProductList = () => {
   const searchFieldOptions = [
     { value: 'name', label: 'Product Name' },
     { value: 'brand', label: 'Brand' },
-    { value: 'category', label: 'Category' },
-    { value: 'description', label: 'Description' }
+    { value: 'category', label: 'Category' }
   ];
 
   const loadProducts = useCallback(async () => {
@@ -162,24 +160,7 @@ const ProductList = () => {
     handleSearch(searchTerm, searchField, criteria);
   };
 
-  const handleDelete = async (product) => {
-    try {
-      await productAPI.delete(product.id);
-      toast.success('Product deleted successfully');
-      loadProducts();
-    } catch (error) {
-      toast.error('Failed to delete product');
-      
-    }
-  };
 
-  const openDeleteDialog = (product) => {
-    setDeleteDialog({ isOpen: true, product });
-  };
-
-  const closeDeleteDialog = () => {
-    setDeleteDialog({ isOpen: false, product: null });
-  };
 
   return (
     <div className="space-y-6">
@@ -221,7 +202,9 @@ const ProductList = () => {
           <div>
             <FilterBuilder
               availableFields={PRODUCT_FILTER_FIELDS}
+              defaultSearchFields={PRODUCT_SEARCH_FIELDS}
               onSearch={handleFilterSearch}
+              searchPlaceholder="Search products..."
               showSimpleSearch={false}
               showAdvancedFilters={true}
             />
@@ -317,13 +300,7 @@ const ProductList = () => {
                           >
                             <PencilIcon className="h-5 w-5" />
                           </Link>
-                          <button
-                            onClick={() => openDeleteDialog(product)}
-                            className="text-danger-600 hover:text-danger-900"
-                            title="Delete"
-                          >
-                            <TrashIcon className="h-5 w-5" />
-                          </button>
+
                         </div>
                       </td>
                     </tr>
@@ -335,16 +312,7 @@ const ProductList = () => {
         </LoadingOverlay>
       </div>
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={deleteDialog.isOpen}
-        onClose={closeDeleteDialog}
-        onConfirm={() => handleDelete(deleteDialog.product)}
-        title="Delete Product"
-        message={`Are you sure you want to delete "${deleteDialog.product?.name}"? This action cannot be undone.`}
-        confirmText="Delete"
-        type="danger"
-      />
+
     </div>
   );
 };
