@@ -98,7 +98,8 @@ export const productAPI = {
   getById: (id, config = {}) => api.get(`/product/${id}`, config),
   create: (data, config = {}) => api.post('/product/create', data, config),
   update: (id, data, config = {}) => api.put(`/product/update/${id}`, data, config),
-  search: (criteria, config = {}) => api.post('/product/search', criteria, config),
+  getAll: (config = {}) => api.post('/product/search', [], config), // POST with empty array for all products
+  search: (criteria, config = {}) => api.post('/product/search', criteria, config), // POST with criteria for filtered search
 };
 
 // Transaction API

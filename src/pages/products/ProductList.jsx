@@ -50,7 +50,7 @@ const ProductList = () => {
 
     try {
       setLoading(true);
-      const response = await productAPI.search([], {
+      const response = await productAPI.getAll({
         signal: abortControllerRef.current.signal
       });
 
@@ -123,7 +123,7 @@ const ProductList = () => {
         response = await productAPI.search(searchCriteriaForField, requestConfig);
       } else {
         // Load all products
-        response = await productAPI.search([], requestConfig);
+        response = await productAPI.getAll(requestConfig);
       }
 
       // Check if request wasn't aborted
