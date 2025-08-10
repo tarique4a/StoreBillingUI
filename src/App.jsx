@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,6 +9,7 @@ import Layout from './components/common/Layout';
 import ErrorBoundary from './components/common/ErrorBoundary';
 import NotFound from './components/common/NotFound';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import { initPerformanceMonitoring } from './utils/performance';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import ForgotPassword from './components/auth/ForgotPassword';
@@ -46,6 +47,11 @@ import ShopForm from './pages/shops/ShopForm';
 import Profile from './pages/Profile';
 
 function App() {
+  // Initialize performance monitoring
+  useEffect(() => {
+    initPerformanceMonitoring();
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>

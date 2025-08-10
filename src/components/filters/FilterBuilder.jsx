@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, memo } from 'react';
 import {
   FunnelIcon,
   PlusIcon,
@@ -230,4 +230,4 @@ const FilterBuilder = ({
   );
 };
 
-export default FilterBuilder;
+export default memo(FilterBuilder);

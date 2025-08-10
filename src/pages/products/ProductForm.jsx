@@ -32,27 +32,52 @@ const ProductForm = () => {
     },
   });
 
-  const watchedValues = watch();
+  // Only watch specific fields needed for calculations to reduce re-renders
+  const watchedPrices = watch(['unitSalePrice', 'unitCostPrice']);
 
   useEffect(() => {
-    if (isEdit) {
-      loadProduct();
-    }
+    let isMounted = true;
+
+    const loadProductSafely = async () => {
+      if (isEdit && isMounted) {
+        await loadProduct();
+      }
+    };
+
+    loadProductSafely();
+
+    // Cleanup function to prevent state updates on unmounted component
+    return () => {
+      isMounted = false;
+    };
   }, [id, isEdit]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadProduct = async () => {
+    const abortController = new AbortController();
+
     try {
       setInitialLoading(true);
-      const response = await productAPI.getById(id);
-      const product = response.data;
-      
-      // Set form values
-      Object.keys(product).forEach((key) => {
-        if (product[key] !== null && product[key] !== undefined) {
-          setValue(key, product[key]);
-        }
+      const response = await productAPI.getById(id, {
+        signal: abortController.signal
       });
+
+      // Check if component is still mounted before updating state
+      if (!abortController.signal.aborted) {
+        const product = response.data;
+
+        // Set form values
+        Object.keys(product).forEach((key) => {
+          if (product[key] !== null && product[key] !== undefined) {
+            setValue(key, product[key]);
+          }
+        });
+      }
     } catch (error) {
+      // Don't handle aborted requests
+      if (error.name === 'AbortError') {
+        return;
+      }
+
       console.error('Error loading product:', error);
       const message = error.response?.status === 404
         ? 'Product not found'
@@ -60,8 +85,15 @@ const ProductForm = () => {
       toast.error(message);
       navigate('/products');
     } finally {
-      setInitialLoading(false);
+      if (!abortController.signal.aborted) {
+        setInitialLoading(false);
+      }
     }
+
+    // Return cleanup function
+    return () => {
+      abortController.abort();
+    };
   };
 
   const onSubmit = async (data) => {
@@ -141,8 +173,8 @@ const ProductForm = () => {
     );
   }
 
-  const profitMargin = watchedValues.unitSalePrice && watchedValues.unitCostPrice 
-    ? ((watchedValues.unitSalePrice - watchedValues.unitCostPrice) / watchedValues.unitCostPrice * 100).toFixed(2)
+  const profitMargin = watchedPrices.unitSalePrice && watchedPrices.unitCostPrice
+    ? ((watchedPrices.unitSalePrice - watchedPrices.unitCostPrice) / watchedPrices.unitCostPrice * 100).toFixed(2)
     : 0;
 
   return (
