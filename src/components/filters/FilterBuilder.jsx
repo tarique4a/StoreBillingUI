@@ -22,7 +22,8 @@ const FilterBuilder = ({
   showAdvancedFilters = true,
   className = ""
 }) => {
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(!showSimpleSearch);
+  const [userClosedAdvanced, setUserClosedAdvanced] = useState(false);
   const [filterGroups, setFilterGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -37,6 +38,13 @@ const FilterBuilder = ({
       value: ''
     }]
   }), []);
+
+  // Auto-add initial filter group when advanced filters are shown by default
+  React.useEffect(() => {
+    if (!showSimpleSearch && showAdvancedFilters && filterGroups.length === 0 && !userClosedAdvanced) {
+      setFilterGroups([createInitialGroup()]);
+    }
+  }, [showSimpleSearch, showAdvancedFilters, filterGroups.length, createInitialGroup, userClosedAdvanced]);
 
   const addFilterGroup = useCallback(() => {
     setFilterGroups(prev => [...prev, createInitialGroup()]);
@@ -55,19 +63,31 @@ const FilterBuilder = ({
   // Convert filter groups to search criteria
   const convertToSearchCriteria = useCallback(() => {
     const criteria = [];
-    
+
+    console.log('Converting filter groups to criteria:', filterGroups);
+
     filterGroups.forEach(group => {
       group.conditions.forEach(condition => {
+        console.log('Processing condition:', condition);
         if (condition.field && condition.operator && condition.value) {
-          criteria.push(createSearchCriteria(
+          const searchCriteria = createSearchCriteria(
             condition.field,
             condition.value,
             condition.operator
-          ));
+          );
+          console.log('Created search criteria:', searchCriteria);
+          criteria.push(searchCriteria);
+        } else {
+          console.log('Condition incomplete:', {
+            field: condition.field,
+            operator: condition.operator,
+            value: condition.value
+          });
         }
       });
     });
-    
+
+    console.log('Final criteria array:', criteria);
     return criteria;
   }, [filterGroups]);
 
@@ -90,9 +110,18 @@ const FilterBuilder = ({
 
   // Handle advanced filter search
   const handleAdvancedSearch = useCallback(() => {
+    console.log('Apply Filters button clicked!');
     const searchCriteria = convertToSearchCriteria();
+    console.log('Advanced search criteria:', searchCriteria);
+    console.log('Calling onSearch with:', { term: '', criteria: searchCriteria });
     onSearch('', searchCriteria);
-  }, [convertToSearchCriteria, onSearch]);
+
+    // Close the advanced filters panel after applying filters
+    if (!showSimpleSearch) {
+      setShowAdvanced(false);
+      setUserClosedAdvanced(true);
+    }
+  }, [convertToSearchCriteria, onSearch, showSimpleSearch]);
 
   // Clear all filters
   const clearFilters = useCallback(() => {
@@ -142,14 +171,53 @@ const FilterBuilder = ({
         </div>
       )}
 
+      {/* Filters Toggle for when simple search is disabled */}
+      {!showSimpleSearch && showAdvancedFilters && (
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => {
+              setShowAdvanced(!showAdvanced);
+              setUserClosedAdvanced(false);
+            }}
+            className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
+              showAdvanced || filterGroups.length > 0
+                ? 'border-primary-500 text-primary-600 bg-primary-50'
+                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            }`}
+          >
+            <FunnelIcon className="h-4 w-4" />
+            <span className="text-sm">Advanced Filters</span>
+            {filterGroups.length > 0 && (
+              <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
+                {filterGroups.length}
+              </span>
+            )}
+          </button>
+
+          {hasActiveFilters && (
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Advanced Filters Panel */}
-      {showAdvanced && showAdvancedFilters && (
+      {(showAdvanced || (!showSimpleSearch && !userClosedAdvanced)) && showAdvancedFilters && (
         <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-medium text-gray-900">Advanced Filters</h3>
             <button
               type="button"
-              onClick={() => setShowAdvanced(false)}
+              onClick={() => {
+                setShowAdvanced(false);
+                setUserClosedAdvanced(true);
+              }}
               className="text-gray-400 hover:text-gray-600"
             >
               <XMarkIcon className="h-5 w-5" />

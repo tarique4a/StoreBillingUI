@@ -330,9 +330,10 @@ const ProductList = () => {
     }
   }, [searchTerm, handleSearch]);
 
-  const handleFilterSearch = useCallback((criteria) => {
-    handleSearch(searchTerm, searchField, criteria);
-  }, [handleSearch, searchTerm, searchField]);
+  const handleFilterSearch = useCallback((term, criteria) => {
+    console.log('Filter search called with:', { term, criteria });
+    handleSearch(term, searchField, criteria);
+  }, [handleSearch, searchField]);
 
 
 
@@ -390,6 +391,9 @@ const ProductList = () => {
 
           {/* Advanced Filters */}
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Advanced Filters
+            </label>
             <FilterBuilder
               availableFields={PRODUCT_FILTER_FIELDS}
               defaultSearchFields={PRODUCT_SEARCH_FIELDS}
