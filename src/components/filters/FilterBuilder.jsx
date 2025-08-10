@@ -128,10 +128,23 @@ const FilterBuilder = ({
     onSearch('', []);
   }, [onSearch]);
 
+  // Count valid/complete filters - memoized for performance
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    filterGroups.forEach(group => {
+      group.conditions.forEach(condition => {
+        if (condition.field && condition.operator && condition.value) {
+          count++;
+        }
+      });
+    });
+    return count;
+  }, [filterGroups]);
+
   // Check if there are active filters - memoized for performance
   const hasActiveFilters = useMemo(() =>
-    filterGroups.length > 0 || searchTerm.trim().length > 0,
-    [filterGroups.length, searchTerm]
+    activeFilterCount > 0 || searchTerm.trim().length > 0,
+    [activeFilterCount, searchTerm]
   );
 
   return (
@@ -153,16 +166,16 @@ const FilterBuilder = ({
                 type="button"
                 onClick={() => setShowAdvanced(!showAdvanced)}
                 className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
-                  showAdvanced || filterGroups.length > 0
+                  showAdvanced || activeFilterCount > 0
                     ? 'border-primary-500 text-primary-600 bg-primary-50'
                     : 'border-gray-300 text-gray-700 hover:bg-gray-50'
                 }`}
               >
                 <FunnelIcon className="h-4 w-4" />
                 <span className="text-sm">Filters</span>
-                {filterGroups.length > 0 && (
+                {activeFilterCount > 0 && (
                   <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                    {filterGroups.length}
+                    {activeFilterCount}
                   </span>
                 )}
               </button>
@@ -179,16 +192,16 @@ const FilterBuilder = ({
                 setShowAdvanced(!showAdvanced);
               }}
               className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
-                showAdvanced || filterGroups.length > 0
+                showAdvanced || activeFilterCount > 0
                   ? 'border-primary-500 text-primary-600 bg-primary-50'
                   : 'border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
               <FunnelIcon className="h-4 w-4" />
               <span className="text-sm">Advanced Filters</span>
-              {filterGroups.length > 0 && (
+              {activeFilterCount > 0 && (
                 <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                  {filterGroups.length}
+                  {activeFilterCount}
                 </span>
               )}
             </button>

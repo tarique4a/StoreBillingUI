@@ -122,6 +122,7 @@ const ProductList = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [advancedFilters, setAdvancedFilters] = useState([]);
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -324,14 +325,42 @@ const ProductList = () => {
 
     // Set new timeout for debounced search
     debounceTimeoutRef.current = setTimeout(() => {
-      handleSearch(term);
+      // Combine simple search with existing advanced filters
+      let combinedCriteria = [...advancedFilters];
+
+      if (term && term.trim()) {
+        // Add simple search criteria for name field
+        const nameSearchCriteria = createSearchCriteria('name', term.trim(), SEARCH_OPERATIONS.CONTAINS);
+        combinedCriteria.push(nameSearchCriteria);
+      }
+
+      handleSearch(term, combinedCriteria);
     }, 300);
-  }, [handleSearch]);
+  }, [handleSearch, advancedFilters]);
 
   const handleFilterSearch = useCallback((term, criteria) => {
     console.log('Filter search called with:', { term, criteria });
-    handleSearch(term, criteria);
-  }, [handleSearch]);
+
+    // Update advanced filters state
+    setAdvancedFilters(criteria);
+
+    // Combine advanced filters with current simple search term
+    let combinedCriteria = [...criteria];
+
+    if (searchTerm && searchTerm.trim()) {
+      // Add simple search criteria for name field
+      const nameSearchCriteria = createSearchCriteria('name', searchTerm.trim(), SEARCH_OPERATIONS.CONTAINS);
+      combinedCriteria.push(nameSearchCriteria);
+    }
+
+    handleSearch(term, combinedCriteria);
+  }, [handleSearch, searchTerm]);
+
+  // Clear all filters and search
+  const handleClearAll = useCallback(() => {
+    setAdvancedFilters([]);
+    handleSimpleSearch('');
+  }, [handleSimpleSearch]);
 
 
 
