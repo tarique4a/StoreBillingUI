@@ -22,8 +22,7 @@ const FilterBuilder = ({
   showAdvancedFilters = true,
   className = ""
 }) => {
-  const [showAdvanced, setShowAdvanced] = useState(!showSimpleSearch);
-  const [userClosedAdvanced, setUserClosedAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [filterGroups, setFilterGroups] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -41,10 +40,10 @@ const FilterBuilder = ({
 
   // Auto-add initial filter group when advanced filters are shown by default
   React.useEffect(() => {
-    if (!showSimpleSearch && showAdvancedFilters && filterGroups.length === 0 && !userClosedAdvanced) {
+    if (!showSimpleSearch && showAdvancedFilters && filterGroups.length === 0) {
       setFilterGroups([createInitialGroup()]);
     }
-  }, [showSimpleSearch, showAdvancedFilters, filterGroups.length, createInitialGroup, userClosedAdvanced]);
+  }, [showSimpleSearch, showAdvancedFilters, filterGroups.length, createInitialGroup]);
 
   const addFilterGroup = useCallback(() => {
     setFilterGroups(prev => [...prev, createInitialGroup()]);
@@ -119,7 +118,6 @@ const FilterBuilder = ({
     // Close the advanced filters panel after applying filters
     if (!showSimpleSearch) {
       setShowAdvanced(false);
-      setUserClosedAdvanced(true);
     }
   }, [convertToSearchCriteria, onSearch, showSimpleSearch]);
 
@@ -137,22 +135,49 @@ const FilterBuilder = ({
   );
 
   return (
-    <div className={`space-y-4 ${className}`}>
-      {/* Simple Search */}
-      {showSimpleSearch && (
-        <div className="flex items-center space-x-3">
-          <div className="flex-1">
-            <SearchInput
-              placeholder={searchPlaceholder}
-              onSearch={handleSimpleSearch}
-              value={searchTerm}
-            />
+    <div className={`relative ${className}`}>
+      <div className="space-y-4">
+        {/* Simple Search */}
+        {showSimpleSearch && (
+          <div className="flex items-center space-x-3">
+            <div className="flex-1">
+              <SearchInput
+                placeholder={searchPlaceholder}
+                onSearch={handleSimpleSearch}
+                value={searchTerm}
+              />
+            </div>
+
+            {showAdvancedFilters && (
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
+                  showAdvanced || filterGroups.length > 0
+                    ? 'border-primary-500 text-primary-600 bg-primary-50'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+              >
+                <FunnelIcon className="h-4 w-4" />
+                <span className="text-sm">Filters</span>
+                {filterGroups.length > 0 && (
+                  <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
+                    {filterGroups.length}
+                  </span>
+                )}
+              </button>
+            )}
           </div>
-          
-          {showAdvancedFilters && (
+        )}
+
+        {/* Filters Toggle for when simple search is disabled */}
+        {!showSimpleSearch && showAdvancedFilters && (
+          <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => {
+                setShowAdvanced(!showAdvanced);
+              }}
               className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
                 showAdvanced || filterGroups.length > 0
                   ? 'border-primary-500 text-primary-600 bg-primary-50'
@@ -160,69 +185,59 @@ const FilterBuilder = ({
               }`}
             >
               <FunnelIcon className="h-4 w-4" />
-              <span className="text-sm">Filters</span>
+              <span className="text-sm">Advanced Filters</span>
               {filterGroups.length > 0 && (
                 <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
                   {filterGroups.length}
                 </span>
               )}
             </button>
-          )}
-        </div>
-      )}
 
-      {/* Filters Toggle for when simple search is disabled */}
-      {!showSimpleSearch && showAdvancedFilters && (
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => {
-              setShowAdvanced(!showAdvanced);
-              setUserClosedAdvanced(false);
-            }}
-            className={`flex items-center space-x-2 px-3 py-2 border rounded-md transition-colors ${
-              showAdvanced || filterGroups.length > 0
-                ? 'border-primary-500 text-primary-600 bg-primary-50'
-                : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-            }`}
-          >
-            <FunnelIcon className="h-4 w-4" />
-            <span className="text-sm">Advanced Filters</span>
-            {filterGroups.length > 0 && (
-              <span className="bg-primary-100 text-primary-800 text-xs px-2 py-1 rounded-full">
-                {filterGroups.length}
-              </span>
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Clear all
+              </button>
             )}
-          </button>
-
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {/* Advanced Filters Panel */}
-      {(showAdvanced || (!showSimpleSearch && !userClosedAdvanced)) && showAdvancedFilters && (
-        <div className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-medium text-gray-900">Advanced Filters</h3>
-            <button
-              type="button"
-              onClick={() => {
-                setShowAdvanced(false);
-                setUserClosedAdvanced(true);
-              }}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
-          </div>
+      {showAdvanced && showAdvancedFilters && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            onClick={() => setShowAdvanced(false)}
+          />
+
+          {/* Panel */}
+          <div className="fixed inset-x-4 top-1/2 transform -translate-y-1/2 border border-gray-200 rounded-lg p-4 bg-white shadow-xl z-50 max-w-4xl mx-auto max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-medium text-gray-900">Advanced Filters</h3>
+              <div className="flex items-center space-x-3">
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
+                  >
+                    Clear all
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
 
           {/* Filter Groups */}
           <div className="space-y-4">
@@ -277,22 +292,31 @@ const FilterBuilder = ({
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        </>
       )}
 
       {/* Initialize with one filter group when advanced is first opened */}
       {showAdvanced && filterGroups.length === 0 && (
-        <div className="text-center py-8">
-          <p className="text-gray-500 mb-4">No filters added yet</p>
-          <button
-            type="button"
-            onClick={addFilterGroup}
-            className="flex items-center space-x-2 mx-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            <PlusIcon className="h-4 w-4" />
-            <span>Add your first filter</span>
-          </button>
-        </div>
+        <>
+          <div className="fixed inset-0 bg-black bg-opacity-50 z-40" onClick={() => setShowAdvanced(false)} />
+          <div className="fixed inset-x-4 top-1/2 transform -translate-y-1/2 border border-gray-200 rounded-lg p-8 bg-white shadow-xl z-50 max-w-md mx-auto">
+            <div className="text-center">
+              <p className="text-gray-500 mb-4">No filters added yet</p>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  addFilterGroup();
+                }}
+                className="flex items-center space-x-2 mx-auto px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                <PlusIcon className="h-4 w-4" />
+                <span>Add your first filter</span>
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

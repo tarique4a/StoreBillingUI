@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   PlusIcon,
   PencilIcon,
   EyeIcon,
   CubeIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  MagnifyingGlassIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { toast } from 'react-toastify';
 
@@ -14,10 +16,10 @@ import { LoadingOverlay } from '../../components/common/LoadingSpinner';
 import StatusBadge from '../../components/common/StatusBadge';
 import EmptyState from '../../components/common/EmptyState';
 
-import FieldSearchInput from '../../components/common/FieldSearchInput';
+
 import { FilterBuilder } from '../../components/filters';
 import { PRODUCT_FILTER_FIELDS, PRODUCT_SEARCH_FIELDS } from '../../config/filterConfigs';
-import { useRenderPerformance, trackAPIPerformance } from '../../utils/performance';
+import { trackAPIPerformance } from '../../utils/performance';
 
 // Memoized ProductRow component to prevent unnecessary re-renders
 const ProductRow = React.memo(({ product }) => {
@@ -117,13 +119,9 @@ const ProductRow = React.memo(({ product }) => {
 ProductRow.displayName = 'ProductRow';
 
 const ProductList = () => {
-  // Performance tracking
-  const { renderCount } = useRenderPerformance('ProductList');
-
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchField, setSearchField] = useState('name'); // Default to name field
   const [error, setError] = useState(null);
   const [retryCount, setRetryCount] = useState(0);
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -131,12 +129,7 @@ const ProductList = () => {
   const abortControllerRef = useRef(null);
   const loadingTimeoutRef = useRef(null);
 
-  // Memoized search field options to prevent unnecessary re-renders
-  const searchFieldOptions = useMemo(() => [
-    { value: 'name', label: 'Product Name' },
-    { value: 'brand', label: 'Brand' },
-    { value: 'category', label: 'Category' }
-  ], []);
+
 
   const loadProducts = useCallback(async () => {
     // Cancel previous request if exists
@@ -226,12 +219,15 @@ const ProductList = () => {
       if (loadingTimeoutRef.current) {
         clearTimeout(loadingTimeoutRef.current);
       }
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
   }, [loadProducts, error, handleRetry]);
 
-  const handleSearch = useCallback(async (term, selectedField, searchCriteria = []) => {
+  const handleSearch = useCallback(async (term, searchCriteria = []) => {
     setSearchTerm(term);
 
     // Cancel previous search request if exists
@@ -258,10 +254,9 @@ const ProductList = () => {
           'advancedSearch'
         );
       } else if (term && term.trim()) {
-        // Simple search on selected field only
-        const fieldToSearch = selectedField || 'name'; // Use selectedField directly instead of state
+        // Simple search on name field only
         const searchCriteriaForField = [
-          createSearchCriteria(fieldToSearch, term.trim(), SEARCH_OPERATIONS.CONTAINS)
+          createSearchCriteria('name', term.trim(), SEARCH_OPERATIONS.CONTAINS)
         ];
         response = await trackAPIPerformance(
           () => productAPI.search(searchCriteriaForField, requestConfig),
@@ -316,24 +311,27 @@ const ProductList = () => {
       }
       setLoading(false);
     }
-  }, []); // Remove searchField dependency to prevent unnecessary re-renders
+  }, [retryCount]);
 
-  const handleFieldSearchInput = useCallback((term, field) => {
-    handleSearch(term, field);
-  }, [handleSearch]);
+  // Debounced search handler
+  const debounceTimeoutRef = useRef(null);
 
-  const handleFieldChange = useCallback((field) => {
-    setSearchField(field);
-    // Re-trigger search with new field if there's a current search term
-    if (searchTerm) {
-      handleSearch(searchTerm, field);
+  const handleSimpleSearch = useCallback((term) => {
+    // Clear previous timeout
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
     }
-  }, [searchTerm, handleSearch]);
+
+    // Set new timeout for debounced search
+    debounceTimeoutRef.current = setTimeout(() => {
+      handleSearch(term);
+    }, 300);
+  }, [handleSearch]);
 
   const handleFilterSearch = useCallback((term, criteria) => {
     console.log('Filter search called with:', { term, criteria });
-    handleSearch(term, searchField, criteria);
-  }, [handleSearch, searchField]);
+    handleSearch(term, criteria);
+  }, [handleSearch]);
 
 
 
@@ -370,38 +368,54 @@ const ProductList = () => {
       </div>
 
       {/* Search and Filters */}
-      <div className="card">
-        <div className="card-body space-y-4">
-          {/* Simple Search with Field Selector */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Search Products
-            </label>
-            <FieldSearchInput
-              placeholder="Search products"
-              onSearch={handleFieldSearchInput}
-              value={searchTerm}
-              searchField={searchField}
-              onFieldChange={handleFieldChange}
-              searchFields={searchFieldOptions}
-              defaultField="name"
-              className="w-full max-w-md"
-            />
-          </div>
+      <div className="card relative overflow-visible">
+        <div className="card-body">
+          {/* Search and Filter Controls - Side by Side */}
+          <div className="flex flex-col lg:flex-row lg:items-end lg:space-x-6 space-y-4 lg:space-y-0 mb-4">
+            {/* Simple Search */}
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Search Products
+              </label>
+              <div className="relative w-full">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  placeholder="Search products by name"
+                  value={searchTerm}
+                  onChange={(e) => handleSimpleSearch(e.target.value)}
+                />
+                {searchTerm && (
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <button
+                      type="button"
+                      className="text-gray-400 hover:text-gray-500 transition-colors"
+                      onClick={() => handleSimpleSearch('')}
+                    >
+                      <XMarkIcon className="h-5 w-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
-          {/* Advanced Filters */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Advanced Filters
-            </label>
-            <FilterBuilder
-              availableFields={PRODUCT_FILTER_FIELDS}
-              defaultSearchFields={PRODUCT_SEARCH_FIELDS}
-              onSearch={handleFilterSearch}
-              searchPlaceholder="Search products..."
-              showSimpleSearch={false}
-              showAdvancedFilters={true}
-            />
+            {/* Advanced Filters Button */}
+            <div className="flex-shrink-0 relative">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Advanced Filters
+              </label>
+              <FilterBuilder
+                availableFields={PRODUCT_FILTER_FIELDS}
+                defaultSearchFields={PRODUCT_SEARCH_FIELDS}
+                onSearch={handleFilterSearch}
+                searchPlaceholder="Search products..."
+                showSimpleSearch={false}
+                showAdvancedFilters={true}
+              />
+            </div>
           </div>
         </div>
       </div>
