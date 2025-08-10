@@ -32,7 +32,25 @@ const ProductDetail = () => {
       const response = await productAPI.getById(id);
       setProduct(response.data);
     } catch (error) {
-      toast.error('Failed to load product');
+      console.error('Error loading product:', error);
+
+      let message = 'Failed to load product';
+      if (error.response) {
+        const status = error.response.status;
+        if (status === 404) {
+          message = 'Product not found';
+        } else if (status >= 500) {
+          message = 'Server error. Please try again later.';
+        } else {
+          message = error.response.data?.message || `Error: ${status}`;
+        }
+      } else if (error.request) {
+        message = 'Network error. Please check your connection.';
+      } else {
+        message = error.message || 'An unexpected error occurred.';
+      }
+
+      toast.error(message);
       navigate('/products');
     } finally {
       setLoading(false);

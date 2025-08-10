@@ -53,7 +53,11 @@ const ProductForm = () => {
         }
       });
     } catch (error) {
-      toast.error('Failed to load product');
+      console.error('Error loading product:', error);
+      const message = error.response?.status === 404
+        ? 'Product not found'
+        : error.response?.data?.message || error.message || 'Failed to load product';
+      toast.error(message);
       navigate('/products');
     } finally {
       setInitialLoading(false);
@@ -64,14 +68,24 @@ const ProductForm = () => {
     try {
       setLoading(true);
 
-      // Convert string numbers to actual numbers
+      // Convert string numbers to actual numbers with validation
       const formattedData = {
         ...data,
-        quantity: parseInt(data.quantity),
-        unitSalePrice: parseFloat(data.unitSalePrice),
-        unitCostPrice: parseFloat(data.unitCostPrice),
-        mrp: parseFloat(data.mrp),
+        quantity: parseInt(data.quantity, 10) || 0,
+        unitSalePrice: parseFloat(data.unitSalePrice) || 0,
+        unitCostPrice: parseFloat(data.unitCostPrice) || 0,
+        mrp: parseFloat(data.mrp) || 0,
       };
+
+      // Validate number ranges
+      if (formattedData.quantity < 0) {
+        toast.error('Quantity cannot be negative');
+        return;
+      }
+      if (formattedData.quantity > Number.MAX_SAFE_INTEGER) {
+        toast.error('Quantity value is too large');
+        return;
+      }
 
       if (isEdit) {
         await productAPI.update(id, formattedData);
@@ -83,9 +97,36 @@ const ProductForm = () => {
       
       navigate('/products');
     } catch (error) {
-      
-      
-      const message = error.response?.data?.message || error.message || 'Operation failed';
+      console.error('Error saving product:', error);
+
+      // Handle different types of errors
+      let message = 'Operation failed';
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+        const data = error.response.data;
+
+        if (status === 400) {
+          // Validation error
+          message = data?.message || 'Invalid product data. Please check your inputs.';
+        } else if (status === 409) {
+          // Conflict error (duplicate name, etc.)
+          message = data?.message || 'A product with this name already exists.';
+        } else if (status === 404) {
+          message = 'Product not found.';
+        } else if (status >= 500) {
+          message = 'Server error. Please try again later.';
+        } else {
+          message = data?.message || `Error: ${status}`;
+        }
+      } else if (error.request) {
+        // Network error
+        message = 'Network error. Please check your connection and try again.';
+      } else {
+        // Other error
+        message = error.message || 'An unexpected error occurred.';
+      }
+
       toast.error(message);
     } finally {
       setLoading(false);
@@ -135,38 +176,41 @@ const ProductForm = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Name */}
               <div>
-                <label className="form-label">
+                <label htmlFor="name" className="form-label">
                   Product Name <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="name"
                   type="text"
                   className={`form-input ${errors.name ? 'border-danger-300' : ''}`}
                   {...register('name', {
                     required: 'Product name is required',
                     pattern: {
-                      value: /^[^\s]+$/,
-                      message: 'Product name cannot contain spaces',
+                      value: /^[a-zA-Z0-9\s\-_.,()&]+$/,
+                      message: 'Product name can only contain letters, numbers, spaces, and common punctuation',
                     },
                     minLength: {
                       value: 2,
                       message: 'Product name must be at least 2 characters',
+                    },
+                    maxLength: {
+                      value: 100,
+                      message: 'Product name must be at most 100 characters',
                     },
                   })}
                 />
                 {errors.name && (
                   <p className="form-error">{errors.name.message}</p>
                 )}
-                <p className="mt-1 text-xs text-gray-500">
-                  Product name cannot contain spaces
-                </p>
               </div>
 
               {/* Brand */}
               <div>
-                <label className="form-label">
+                <label htmlFor="brand" className="form-label">
                   Brand <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="brand"
                   type="text"
                   className={`form-input ${errors.brand ? 'border-danger-300' : ''}`}
                   {...register('brand', {
@@ -180,10 +224,11 @@ const ProductForm = () => {
 
               {/* Category */}
               <div>
-                <label className="form-label">
+                <label htmlFor="category" className="form-label">
                   Category <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="category"
                   type="text"
                   className={`form-input ${errors.category ? 'border-danger-300' : ''}`}
                   {...register('category', {
@@ -197,10 +242,11 @@ const ProductForm = () => {
 
               {/* Quantity */}
               <div>
-                <label className="form-label">
+                <label htmlFor="quantity" className="form-label">
                   Quantity <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="quantity"
                   type="number"
                   min="0"
                   className={`form-input ${errors.quantity ? 'border-danger-300' : ''}`}
@@ -209,6 +255,13 @@ const ProductForm = () => {
                     min: {
                       value: 0,
                       message: 'Quantity must be positive',
+                    },
+                    max: {
+                      value: Number.MAX_SAFE_INTEGER,
+                      message: 'Quantity value is too large',
+                    },
+                    validate: {
+                      isInteger: value => Number.isInteger(Number(value)) || 'Quantity must be a whole number',
                     },
                   })}
                 />
@@ -219,10 +272,11 @@ const ProductForm = () => {
 
               {/* Unit Cost Price */}
               <div>
-                <label className="form-label">
+                <label htmlFor="unitCostPrice" className="form-label">
                   Unit Cost Price <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="unitCostPrice"
                   type="number"
                   step="0.01"
                   min="0"
@@ -242,10 +296,11 @@ const ProductForm = () => {
 
               {/* Unit Sale Price */}
               <div>
-                <label className="form-label">
+                <label htmlFor="unitSalePrice" className="form-label">
                   Unit Sale Price <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="unitSalePrice"
                   type="number"
                   step="0.01"
                   min="0"
@@ -270,10 +325,11 @@ const ProductForm = () => {
 
               {/* MRP */}
               <div className="md:col-span-2">
-                <label className="form-label">
+                <label htmlFor="mrp" className="form-label">
                   MRP (Maximum Retail Price) <span className="text-danger-500">*</span>
                 </label>
                 <input
+                  id="mrp"
                   type="number"
                   step="0.01"
                   min="0"

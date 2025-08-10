@@ -125,8 +125,29 @@ const ProductList = () => {
         return;
       }
 
-      toast.error('Search failed: ' + (error.response?.data?.message || error.message));
-      
+      console.error('Error searching products:', error);
+
+      // Handle different types of errors
+      let message = 'Search failed';
+      if (error.response) {
+        const status = error.response.status;
+        const data = error.response.data;
+
+        if (status === 400) {
+          message = data?.message || 'Invalid search criteria.';
+        } else if (status >= 500) {
+          message = 'Server error. Please try again later.';
+        } else {
+          message = data?.message || `Search failed: ${status}`;
+        }
+      } else if (error.request) {
+        message = 'Network error. Please check your connection.';
+      } else {
+        message = error.message || 'An unexpected error occurred.';
+      }
+
+      toast.error(message);
+
     } finally {
       // Always set loading to false, regardless of abort status
       setLoading(false);

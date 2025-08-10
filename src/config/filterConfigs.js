@@ -75,7 +75,9 @@ export const PRODUCT_FILTER_FIELDS = [
   createFilterField('quantity', 'Quantity', FILTER_FIELD_TYPES.NUMBER),
   createFilterField('unitSalePrice', 'Unit Sale Price', FILTER_FIELD_TYPES.NUMBER),
   createFilterField('unitCostPrice', 'Unit Cost Price', FILTER_FIELD_TYPES.NUMBER),
-  createFilterField('mrp', 'MRP', FILTER_FIELD_TYPES.NUMBER)
+  createFilterField('mrp', 'MRP', FILTER_FIELD_TYPES.NUMBER),
+  createFilterField('createdTime', 'Created Date', FILTER_FIELD_TYPES.DATE),
+  createFilterField('lastModifiedTime', 'Last Modified', FILTER_FIELD_TYPES.DATE)
 ];
 
 export const PRODUCT_SEARCH_FIELDS = ['name', 'brand', 'category'];
